@@ -1,0 +1,17 @@
+Chord Chart Grid: The game features a 12x11 grid representing 12 musical keys (A♭ to G, including sharps/flats) and 11 chord types (Major, Minor, 6th, 7th, 9th, Minor 6th, Minor 7th, Major 7th, Diminished, Augmented, Suspended). Each cell displays a chord (e.g., “C Major,” “Dm7”) with fretboard diagram potential.
+•  Color-Coding System: Keys are grouped and color-coded to distinguish major and minor contexts:
+	•  Major keys/full-step elements: Red (A♭/A), Orange (B♭/B), Yellow (C/D♭), Green (D/E♭), Blue (E/F), Purple (F♯/G).
+	•  Minor keys/half-step tension: Dark Red (A♭m/Am), Burnt Orange (B♭m/Bm), Mustard Yellow (Cm/D♭m), Olive Green (Dm/E♭m), Navy Blue (Em/Fm), Indigo Purple (F♯m/Gm).
+	•  This visual system aids quick identification and aligns with whole-tone (stable) versus semitone (tension) intervals in music theory.
+•  Numbered Exotics: Chords like Diminished, Augmented, and Suspended are assigned numbers (1-5) to indicate their tension level, enhancing the game’s complexity and riff variety (e.g., 1=Diminished, 2=Augmented).
+•  Dice-Rolling Mechanism: Two virtual 8-sided dice (d8s) drive randomness:
+	•  Color Die: Selects a key group (e.g., Red for A♭/A) from the 8 color options.
+	•  Number Die: Chooses a chord type (1-8 mapping to exotic types or Major as fallback).
+	•  Players tap a “Roll Dice” button to generate a single chord (e.g., “Yellow, 3 → C sus”) and a 4-chord riff progression (e.g., “Abm7 → D6 → F#dim → Bm9”).
+•  Riff Generation: The game automatically creates a 4-chord progression per roll, encouraging players to play or improvise using the Major Pentatonic Scale (1-2-3-5-6) as a guide, with colors for full steps and numbers for half-step embellishments (e.g., bends or slides).
+•  Interaction: Played via a touch-optimized web interface on iPhone, with plans for audio feedback (e.g., MP3 chord samples) and potential fretboard visuals.
+Gameplay Modes:
+•  Single Roll Mode: Generates one chord for immediate practice or inspiration.
+•  Riff Mode: Produces a 4-chord progression for building verses or jams.
+•  Challenge Mode (optional): Incorporates half-step numbers to prompt technical techniques like semitone bends.
+•  Practice Mode: Focuses on the Pentatonic Scale for improvisation, aligning with the chart’s bottom section.
