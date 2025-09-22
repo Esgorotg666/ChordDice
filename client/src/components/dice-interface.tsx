@@ -121,7 +121,7 @@ export default function DiceInterface({ onResult }: DiceInterfaceProps) {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <Button
           variant={currentMode === 'single' ? 'default' : 'secondary'}
-          className="py-3 px-4 font-medium transition-all transform active:scale-95"
+          className="py-3 px-4 font-medium transition-all transform active:scale-95 min-h-[48px]"
           onClick={() => setCurrentMode('single')}
           data-testid="button-single-roll"
         >
@@ -129,7 +129,7 @@ export default function DiceInterface({ onResult }: DiceInterfaceProps) {
         </Button>
         <Button
           variant={currentMode === 'riff' ? 'default' : 'secondary'}
-          className="py-3 px-4 font-medium transition-all transform active:scale-95"
+          className="py-3 px-4 font-medium transition-all transform active:scale-95 min-h-[48px]"
           onClick={() => setCurrentMode('riff')}
           data-testid="button-riff-mode"
         >
@@ -140,7 +140,7 @@ export default function DiceInterface({ onResult }: DiceInterfaceProps) {
       {/* Roll Button */}
       <Button
         variant="secondary"
-        className="w-full bg-accent text-accent-foreground py-4 px-6 font-semibold text-lg hover:bg-accent/90 transition-all transform active:scale-95 shadow-lg"
+        className="w-full bg-accent text-accent-foreground py-4 px-6 font-semibold text-lg hover:bg-accent/90 transition-all transform active:scale-95 shadow-lg min-h-[48px]"
         onClick={rollDice}
         disabled={isRolling}
         data-testid="button-roll-dice"

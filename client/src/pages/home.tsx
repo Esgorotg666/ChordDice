@@ -19,8 +19,12 @@ export default function Home() {
 
   const handleDiceResult = (result: GeneratedResult) => {
     setResult(result);
+    // Close any existing modal first
+    setShowRiffModal(false);
+    
     if (result.type === 'riff') {
-      setShowRiffModal(true);
+      // Small delay to ensure clean state transition
+      setTimeout(() => setShowRiffModal(true), 50);
     }
   };
 

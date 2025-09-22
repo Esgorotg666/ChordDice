@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { useEffect } from "react";
 
 interface RiffModalProps {
   isOpen: boolean;
@@ -8,6 +9,19 @@ interface RiffModalProps {
 }
 
 export default function RiffModal({ isOpen, onClose, progression }: RiffModalProps) {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -15,16 +29,20 @@ export default function RiffModal({ isOpen, onClose, progression }: RiffModalPro
       className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
       data-testid="riff-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div className="bg-card rounded-lg p-6 max-w-sm w-full border border-border animate-fade-in">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Generated Riff Progression</h3>
+          <h3 id="modal-title" className="text-lg font-semibold">Generated Riff Progression</h3>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground p-1 h-auto"
+            className="text-muted-foreground hover:text-foreground p-2 h-auto min-h-[44px] min-w-[44px]"
             data-testid="button-close-riff-modal"
+            aria-label="Close modal"
           >
             <X className="h-4 w-4" />
           </Button>
