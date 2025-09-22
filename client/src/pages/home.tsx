@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import { Settings, Crown, User, LogOut } from "lucide-react";
 import DiceInterface from "@/components/dice-interface";
 import ChordChart from "@/components/chord-chart";
 import PentatonicGuide from "@/components/pentatonic-guide";
+import AdvancedScaleGuide from "@/components/advanced-scale-guide";
 import RiffModal from "@/components/riff-modal";
 import FretboardModal from "@/components/fretboard-modal";
+import SubscriptionModal from "@/components/subscription-modal";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { getChordDiagram } from "@/lib/music-data";
 
 interface GeneratedResult {
@@ -16,9 +21,13 @@ interface GeneratedResult {
 }
 
 export default function Home() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
+  
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [showRiffModal, setShowRiffModal] = useState(false);
   const [showFretboardModal, setShowFretboardModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [currentChord, setCurrentChord] = useState<string>('');
   const [selectedChord, setSelectedChord] = useState<string>('');
 
@@ -57,14 +66,68 @@ export default function Home() {
               <i className="fas fa-music text-primary text-xl"></i>
               <h1 className="text-lg font-semibold text-foreground">Chord Riff Generator</h1>
             </div>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="p-2 h-auto"
-              data-testid="button-settings"
-            >
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            
+            <div className="flex items-center space-x-2">
+              {/* Subscription Status Badge */}
+              {isAuthenticated && (
+                <Badge 
+                  variant={hasActiveSubscription ? "default" : "secondary"}
+                  className={hasActiveSubscription ? "bg-primary text-primary-foreground" : ""}
+                >
+                  {hasActiveSubscription ? (
+                    <>
+                      <Crown className="mr-1 h-3 w-3" />
+                      Premium
+                    </>
+                  ) : (
+                    "Free"
+                  )}
+                </Badge>
+              )}
+              
+              {/* Auth Actions */}
+              {isLoading ? (
+                <div className="animate-spin w-5 h-5 border-2 border-muted border-t-primary rounded-full" />
+              ) : isAuthenticated ? (
+                <div className="flex items-center space-x-2">
+                  {user?.profileImageUrl && (
+                    <img 
+                      src={user.profileImageUrl} 
+                      alt="Profile" 
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => window.location.href = '/api/logout'}
+                    className="p-2 h-auto"
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/api/login'}
+                  className="p-2 h-auto"
+                  data-testid="button-login"
+                >
+                  <User className="h-4 w-4" />
+                </Button>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="p-2 h-auto"
+                data-testid="button-settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -103,8 +166,8 @@ export default function Home() {
         {/* Chord Chart */}
         <ChordChart onChordSelect={handleChordSelect} />
 
-        {/* Pentatonic Guide */}
-        <PentatonicGuide />
+        {/* Scale Guide - Premium or Basic */}
+        <AdvancedScaleGuide onUpgrade={() => setShowSubscriptionModal(true)} />
 
         {/* Quick Actions */}
         <div className="bg-card rounded-lg p-4 border border-border">
@@ -159,6 +222,12 @@ export default function Home() {
         onClose={() => setShowFretboardModal(false)}
         chordDiagram={getChordDiagram(currentChord)}
         chordName={currentChord}
+      />
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        open={showSubscriptionModal}
+        onOpenChange={setShowSubscriptionModal}
       />
     </div>
   );
