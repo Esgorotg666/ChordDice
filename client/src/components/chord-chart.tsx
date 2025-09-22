@@ -1,6 +1,10 @@
 import { chordTypes, getAllKeys } from "@/lib/music-data";
 
-export default function ChordChart() {
+interface ChordChartProps {
+  onChordSelect?: (chord: string) => void;
+}
+
+export default function ChordChart({ onChordSelect }: ChordChartProps) {
   const keys = getAllKeys();
 
   const getChordCellClass = (chordType: string, key: string) => {
@@ -62,6 +66,8 @@ export default function ChordChart() {
   const handleChordClick = (chord: string) => {
     // Visual feedback
     console.log('Selected chord:', chord);
+    // Notify parent component
+    onChordSelect?.(chord);
   };
 
   return (

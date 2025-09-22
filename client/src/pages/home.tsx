@@ -4,7 +4,9 @@ import DiceInterface from "@/components/dice-interface";
 import ChordChart from "@/components/chord-chart";
 import PentatonicGuide from "@/components/pentatonic-guide";
 import RiffModal from "@/components/riff-modal";
+import FretboardModal from "@/components/fretboard-modal";
 import { Button } from "@/components/ui/button";
+import { getChordDiagram } from "@/lib/music-data";
 
 interface GeneratedResult {
   type: 'single' | 'riff';
@@ -16,16 +18,33 @@ interface GeneratedResult {
 export default function Home() {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [showRiffModal, setShowRiffModal] = useState(false);
+  const [showFretboardModal, setShowFretboardModal] = useState(false);
+  const [currentChord, setCurrentChord] = useState<string>('');
+  const [selectedChord, setSelectedChord] = useState<string>('');
 
   const handleDiceResult = (result: GeneratedResult) => {
     setResult(result);
-    // Close any existing modal first
+    // Close any existing modals first
     setShowRiffModal(false);
+    setShowFretboardModal(false);
     
     if (result.type === 'riff') {
       // Small delay to ensure clean state transition
       setTimeout(() => setShowRiffModal(true), 50);
     }
+  };
+
+  const handleChordSelect = (chord: string) => {
+    setSelectedChord(chord);
+    console.log('Chord selected from chart:', chord);
+  };
+
+  const handleShowFretboard = (chordName?: string) => {
+    // Use the provided chord, or selected chord, or generated chord as fallback
+    const chordToShow = chordName || selectedChord || result?.chord || '';
+    console.log('Opening fretboard for chord:', chordToShow);
+    setCurrentChord(chordToShow);
+    setShowFretboardModal(true);
   };
 
   return (
@@ -69,8 +88,12 @@ export default function Home() {
                   variant="secondary" 
                   className="hover:bg-accent hover:text-accent-foreground"
                   data-testid="button-show-fretboard"
+                  onClick={() => handleShowFretboard()}
                 >
                   <i className="fas fa-guitar mr-2"></i>Show Fretboard
+                  {selectedChord && selectedChord !== result.chord && (
+                    <span className="ml-1 text-xs">({selectedChord})</span>
+                  )}
                 </Button>
               </div>
             </div>
@@ -78,7 +101,7 @@ export default function Home() {
         )}
 
         {/* Chord Chart */}
-        <ChordChart />
+        <ChordChart onChordSelect={handleChordSelect} />
 
         {/* Pentatonic Guide */}
         <PentatonicGuide />
@@ -126,8 +149,17 @@ export default function Home() {
           isOpen={showRiffModal}
           onClose={() => setShowRiffModal(false)}
           progression={result.progression || []}
+          onShowFretboard={handleShowFretboard}
         />
       )}
+
+      {/* Fretboard Modal */}
+      <FretboardModal
+        isOpen={showFretboardModal}
+        onClose={() => setShowFretboardModal(false)}
+        chordDiagram={getChordDiagram(currentChord)}
+        chordName={currentChord}
+      />
     </div>
   );
 }

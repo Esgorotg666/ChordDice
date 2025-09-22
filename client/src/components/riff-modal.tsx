@@ -6,9 +6,10 @@ interface RiffModalProps {
   isOpen: boolean;
   onClose: () => void;
   progression: string[];
+  onShowFretboard?: (chordName: string) => void;
 }
 
-export default function RiffModal({ isOpen, onClose, progression }: RiffModalProps) {
+export default function RiffModal({ isOpen, onClose, progression, onShowFretboard }: RiffModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -53,12 +54,23 @@ export default function RiffModal({ isOpen, onClose, progression }: RiffModalPro
             {progression.map((chord, index) => (
               <div
                 key={index}
-                className="bg-primary text-primary-foreground p-3 rounded-lg text-center font-semibold animate-fade-in"
+                className="bg-primary text-primary-foreground p-3 rounded-lg text-center font-semibold animate-fade-in relative group"
                 style={{ animationDelay: `${index * 0.1}s` }}
                 data-testid={`chord-${index + 1}`}
               >
                 <div className="text-sm">Chord {index + 1}</div>
-                <div className="text-lg">{chord}</div>
+                <div className="text-lg mb-2">{chord}</div>
+                {onShowFretboard && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs py-1 px-2 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                    onClick={() => onShowFretboard(chord)}
+                    data-testid={`button-fretboard-${index + 1}`}
+                  >
+                    <i className="fas fa-guitar mr-1 text-xs"></i>Fret
+                  </Button>
+                )}
               </div>
             ))}
           </div>
