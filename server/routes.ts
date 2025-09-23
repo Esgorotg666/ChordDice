@@ -10,6 +10,7 @@ import { z } from "zod";
 import Stripe from "stripe";
 import multer from "multer";
 import { parseBuffer } from "music-metadata";
+import { validateAudioMagicBytes, validateFileConsistency } from "./middleware/magicBytes";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs/promises";
@@ -462,7 +463,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = req.user.claims.sub;
         const roomId = req.body.roomId || 'public';
 
-        // Validate audio duration using music-metadata
+        // Validate magic bytes to ensure file is actually an audio file
+        const magicValidation = validateAudioMagicBytes(req.file.buffer);
+        if (!magicValidation.isValid) {
+          return res.status(400).json({ 
+            message: "Invalid audio file format. File does not appear to be a valid audio file.",
+            code: 'INVALID_MAGIC_BYTES'
+          });
+        }
+
+        // Additional consistency validation
+        const consistencyCheck = validateFileConsistency(req.file.buffer, req.file.originalname, req.file.mimetype);
+        if (!consistencyCheck.isValid) {
+          return res.status(400).json({ 
+            message: consistencyCheck.reason || "File validation failed",
+            code: 'INCONSISTENT_FILE_FORMAT'
+          });
+        }
+
+        // Validate audio duration and metadata using music-metadata
         const metadata = await parseBuffer(req.file.buffer, req.file.mimetype);
         const duration = metadata.format.duration;
 
