@@ -13,6 +13,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs/promises";
 import express from "express";
+import DOMPurify from "isomorphic-dompurify";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -508,10 +509,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const validatedData = messageSchema.parse(req.body);
         
+        // Sanitize content to prevent XSS attacks
+        const sanitizedContent = DOMPurify.sanitize(validatedData.content, { 
+          ALLOWED_TAGS: [], // Strip all HTML tags
+          ALLOWED_ATTR: [] // Strip all attributes
+        });
+        
         const chatMessage = await storage.createChatMessage({
           roomId: validatedData.roomId,
           userId,
-          content: validatedData.content,
+          content: sanitizedContent,
           audioUrl: null,
           audioDurationSec: null,
           mimeType: null

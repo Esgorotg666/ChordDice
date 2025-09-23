@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, Mic, Upload, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import DOMPurify from "isomorphic-dompurify";
 
 interface ChatMessage {
   id: string;
@@ -316,9 +317,16 @@ export default function ChatPage() {
                         </span>
                       </div>
                       {msg.content ? (
-                        <p className="text-sm" data-testid={`message-content-${msg.id}`}>
-                          {msg.content}
-                        </p>
+                        <p 
+                          className="text-sm" 
+                          data-testid={`message-content-${msg.id}`}
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(msg.content, {
+                              ALLOWED_TAGS: ['br'], // Allow line breaks only
+                              ALLOWED_ATTR: []
+                            })
+                          }}
+                        />
                       ) : msg.audioUrl ? (
                         <div className="bg-muted rounded-lg p-3 max-w-xs" data-testid={`audio-message-${msg.id}`}>
                           <div className="flex items-center gap-2 mb-2">
