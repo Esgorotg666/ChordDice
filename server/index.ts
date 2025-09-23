@@ -21,8 +21,12 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      
+      // Only log response body for non-sensitive endpoints and error responses
+      if (capturedJsonResponse && res.statusCode >= 400) {
+        // For errors, only log the message field to avoid sensitive data exposure
+        const safeResponse = capturedJsonResponse.message ? { message: capturedJsonResponse.message } : {};
+        logLine += ` :: ${JSON.stringify(safeResponse)}`;
       }
 
       if (logLine.length > 80) {

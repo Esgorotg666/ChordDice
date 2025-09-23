@@ -85,13 +85,11 @@ export default function Home() {
 
   const handleChordSelect = (chord: string) => {
     setSelectedChord(chord);
-    console.log('Chord selected from chart:', chord);
   };
 
   const handleShowFretboard = (chordName?: string) => {
     // Use the provided chord, or selected chord, or generated chord as fallback
     const chordToShow = chordName || selectedChord || result?.chord || '';
-    console.log('Opening fretboard for chord:', chordToShow);
     setCurrentChord(chordToShow);
     setShowFretboardModal(true);
   };
