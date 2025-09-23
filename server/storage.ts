@@ -6,13 +6,16 @@ import {
   type InsertChordProgression,
   type Referral,
   type InsertReferral,
+  type ChatMessage,
+  type InsertChatMessage,
   users,
   chordProgressions,
-  referrals
+  referrals,
+  chatMessages
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc, lt } from "drizzle-orm";
 
 export interface IStorage {
   // Auth methods (required for Replit Auth)
@@ -44,6 +47,11 @@ export interface IStorage {
   updateChordProgression(id: string, updates: Partial<ChordProgression>): Promise<ChordProgression | undefined>;
   deleteChordProgression(id: string): Promise<boolean>;
   getFavoriteProgressions(userId: string): Promise<ChordProgression[]>;
+  
+  // Chat message methods
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatHistory(roomId: string, limit?: number, before?: Date): Promise<Array<ChatMessage & { user: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl'> }>>;
+  deleteChatMessage(messageId: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -487,6 +495,53 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(chordProgressions)
       .where(and(eq(chordProgressions.userId, userId), eq(chordProgressions.isFavorite, "true")));
+  }
+
+  // Chat message methods
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [chatMessage] = await db
+      .insert(chatMessages)
+      .values(message)
+      .returning();
+    return chatMessage;
+  }
+
+  async getChatHistory(roomId: string, limit: number = 50, before?: Date): Promise<Array<ChatMessage & { user: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl'> }>> {
+    const query = db
+      .select({
+        id: chatMessages.id,
+        roomId: chatMessages.roomId,
+        userId: chatMessages.userId,
+        content: chatMessages.content,
+        audioUrl: chatMessages.audioUrl,
+        audioDurationSec: chatMessages.audioDurationSec,
+        mimeType: chatMessages.mimeType,
+        createdAt: chatMessages.createdAt,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        }
+      })
+      .from(chatMessages)
+      .innerJoin(users, eq(chatMessages.userId, users.id))
+      .where(
+        before 
+          ? and(eq(chatMessages.roomId, roomId), lt(chatMessages.createdAt, before))
+          : eq(chatMessages.roomId, roomId)
+      )
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+
+    return await query;
+  }
+
+  async deleteChatMessage(messageId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(chatMessages)
+      .where(and(eq(chatMessages.id, messageId), eq(chatMessages.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
