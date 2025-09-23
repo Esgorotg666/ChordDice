@@ -27,10 +27,7 @@ export default function ForgotPasswordPage() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("/api/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/auth/forgot-password", data);
 
       const result = await response.json();
 

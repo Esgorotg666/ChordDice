@@ -33,10 +33,7 @@ export default function LoginPage() {
       setIsSubmitting(true);
       setNeedsVerification(false);
       
-      const response = await apiRequest("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/auth/login", data);
 
       const result = await response.json();
 
@@ -75,10 +72,7 @@ export default function LoginPage() {
 
   const resendVerification = async () => {
     try {
-      const response = await apiRequest("/api/auth/resend-verification", {
-        method: "POST",
-        body: JSON.stringify({ email: userEmail }),
-      });
+      const response = await apiRequest("POST", "/api/auth/resend-verification", { email: userEmail });
 
       const result = await response.json();
 

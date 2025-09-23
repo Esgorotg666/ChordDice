@@ -24,8 +24,8 @@ export default function VerifyEmailPage() {
           return;
         }
 
-        const response = await apiRequest(`/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
-          method: "GET",
+        const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+          credentials: "include",
         });
 
         const result = await response.json();

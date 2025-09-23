@@ -32,10 +32,7 @@ export default function SignupPage() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/auth/register", data);
 
       if (response.ok) {
         const result = await response.json();

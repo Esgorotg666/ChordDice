@@ -19,11 +19,12 @@ import {
   generateVerificationToken, 
   generatePasswordResetToken 
 } from './emailService';
+import { createRateLimitMiddleware, mutationRateLimiter } from './middleware/rateLimiter';
 
 const router = Router();
 
 // User registration endpoint
-router.post('/register', async (req, res) => {
+router.post('/register', createRateLimitMiddleware(mutationRateLimiter, "registration"), async (req, res) => {
   try {
     const userData = registerUserSchema.parse(req.body);
     
@@ -87,7 +88,7 @@ router.post('/register', async (req, res) => {
 });
 
 // User login endpoint
-router.post('/login', async (req, res) => {
+router.post('/login', createRateLimitMiddleware(mutationRateLimiter, "login"), async (req, res) => {
   try {
     const { username, password } = loginUserSchema.parse(req.body);
     
@@ -110,6 +111,13 @@ router.post('/login', async (req, res) => {
         requiresVerification: true 
       });
     }
+    
+    // Regenerate session ID for security (prevent session fixation)
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error('Session regeneration error:', err);
+      }
+    });
     
     // Set user session
     (req.session as any).userId = user.id;
@@ -203,8 +211,8 @@ router.get('/verify-email', async (req, res) => {
   }
 });
 
-// Forgot password endpoint
-router.post('/forgot-password', async (req, res) => {
+// Forgot password endpoint  
+router.post('/forgot-password', createRateLimitMiddleware(mutationRateLimiter, "forgot password"), async (req, res) => {
   try {
     const { email } = forgotPasswordSchema.parse(req.body);
     
@@ -248,7 +256,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // Reset password endpoint
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', createRateLimitMiddleware(mutationRateLimiter, "reset password"), async (req, res) => {
   try {
     const { token, password } = resetPasswordSchema.parse(req.body);
     
@@ -282,7 +290,7 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // Resend verification email endpoint
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', createRateLimitMiddleware(mutationRateLimiter, "resend verification"), async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -326,6 +334,31 @@ router.post('/resend-verification', async (req, res) => {
   } catch (error) {
     console.error('Resend verification error:', error);
     res.status(500).json({ message: 'Failed to resend verification email' });
+  }
+});
+
+// Get current user endpoint  
+router.get('/user', async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const user = await storage.getUser(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Return user without sensitive data
+    const { password, emailVerificationToken, passwordResetToken, ...safeUser } = user;
+    res.json(safeUser);
+    
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ message: 'Failed to get user information' });
   }
 });
 
