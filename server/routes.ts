@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, getSession } from "./replitAuth";
 import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter } from "./middleware/rateLimiter";
 import { z } from "zod";
 import Stripe from "stripe";
@@ -456,17 +457,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimeType: req.file.mimetype
         });
 
+        const messageWithUser = {
+          ...chatMessage,
+          user: {
+            id: req.user.claims.sub,
+            firstName: req.user.claims.first_name || 'Unknown',
+            lastName: req.user.claims.last_name || '',
+            profileImageUrl: req.user.claims.profile_image_url
+          }
+        };
+
+        // Broadcast to all users in the room via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+          io.to(roomId).emit('chat:message', messageWithUser);
+        }
+
         res.json({
           message: "Audio uploaded successfully",
-          chatMessage: {
-            ...chatMessage,
-            user: {
-              id: req.user.claims.sub,
-              firstName: req.user.claims.first_name || 'Unknown',
-              lastName: req.user.claims.last_name || '',
-              profileImageUrl: req.user.claims.profile_image_url
-            }
-          }
+          chatMessage: messageWithUser
         });
 
       } catch (error) {
@@ -500,17 +509,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimeType: null
         });
 
+        const messageWithUser = {
+          ...chatMessage,
+          user: {
+            id: req.user.claims.sub,
+            firstName: req.user.claims.first_name || 'Unknown',
+            lastName: req.user.claims.last_name || '',
+            profileImageUrl: req.user.claims.profile_image_url
+          }
+        };
+
+        // Broadcast to all users in the room via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+          io.to(validatedData.roomId).emit('chat:message', messageWithUser);
+        }
+
         res.json({
           message: "Message sent successfully",
-          chatMessage: {
-            ...chatMessage,
-            user: {
-              id: req.user.claims.sub,
-              firstName: req.user.claims.first_name || 'Unknown',
-              lastName: req.user.claims.last_name || '',
-              profileImageUrl: req.user.claims.profile_image_url
-            }
-          }
+          chatMessage: messageWithUser
         });
 
       } catch (error) {
@@ -527,5 +544,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   const httpServer = createServer(app);
+  
+  // Initialize Socket.IO
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: process.env.NODE_ENV === 'development' 
+        ? ["http://localhost:5000", "http://127.0.0.1:5000"] 
+        : [], // Empty array in production for same-origin only
+      methods: ["GET", "POST"],
+      credentials: true // Allow cookies for session authentication
+    }
+  });
+
+  // Socket.IO authentication middleware using session cookies
+  const sessionMiddleware = getSession();
+  io.engine.use((req: any, res: any, next: any) => {
+    sessionMiddleware(req, res, next);
+  });
+
+  io.use(async (socket, next) => {
+    try {
+      const req = socket.request as any;
+      
+      // Check if user is authenticated via session (same as REST API)
+      if (!req.session || !req.session.passport || !req.session.passport.user) {
+        return next(new Error('Authentication required'));
+      }
+
+      const sessionUser = req.session.passport.user;
+      if (!sessionUser.claims || !sessionUser.claims.sub) {
+        return next(new Error('Invalid session'));
+      }
+
+      const userId = sessionUser.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return next(new Error('User not found'));
+      }
+
+      // Attach user info to socket (using session claims like REST API)
+      socket.data.user = {
+        id: userId,
+        firstName: sessionUser.claims.first_name || 'Unknown',
+        lastName: sessionUser.claims.last_name || '',
+        profileImageUrl: sessionUser.claims.profile_image_url
+      };
+
+      next();
+    } catch (error) {
+      console.error('Socket authentication error:', error);
+      next(new Error('Authentication failed'));
+    }
+  });
+
+  // Socket.IO connection handling
+  io.on('connection', (socket) => {
+    console.log(`User ${socket.data.user.firstName} connected to chat`);
+
+    // Join the public room by default
+    socket.join('public');
+
+    // Handle joining specific rooms
+    socket.on('chat:join', (roomId: string) => {
+      socket.leave('public'); // Leave current room
+      socket.join(roomId);
+      console.log(`User ${socket.data.user.firstName} joined room: ${roomId}`);
+    });
+
+    // Handle real-time text messages
+    socket.on('chat:message', async (data: { roomId: string; content: string }) => {
+      try {
+        const { roomId, content } = data;
+        
+        // Validate message content
+        if (!content || content.trim().length === 0 || content.length > 1000) {
+          socket.emit('chat:error', { message: 'Invalid message content' });
+          return;
+        }
+
+        // Create message in database
+        const chatMessage = await storage.createChatMessage({
+          roomId: roomId || 'public',
+          userId: socket.data.user.id,
+          content: content.trim(),
+          audioUrl: null,
+          audioDurationSec: null,
+          mimeType: null
+        });
+
+        // Broadcast to all users in the room
+        const messageWithUser = {
+          ...chatMessage,
+          user: socket.data.user
+        };
+
+        io.to(roomId || 'public').emit('chat:message', messageWithUser);
+        
+      } catch (error) {
+        console.error('Error handling chat message:', error);
+        socket.emit('chat:error', { message: 'Failed to send message' });
+      }
+    });
+
+    // Handle typing indicators
+    socket.on('chat:typing', (data: { roomId: string; isTyping: boolean }) => {
+      socket.to(data.roomId || 'public').emit('chat:typing', {
+        userId: socket.data.user.id,
+        userName: `${socket.data.user.firstName} ${socket.data.user.lastName}`.trim(),
+        isTyping: data.isTyping
+      });
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      console.log(`User ${socket.data.user.firstName} disconnected from chat`);
+    });
+  });
+
+  // Attach io to the app so routes can access it for broadcasting
+  app.set('io', io);
+
   return httpServer;
 }
