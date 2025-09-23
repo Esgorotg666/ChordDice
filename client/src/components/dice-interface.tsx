@@ -12,22 +12,24 @@ interface DiceInterfaceProps {
   onUpgrade?: () => void;
 }
 
-type Genre = 'any' | 'jazz' | 'blues' | 'rock' | 'pop' | 'folk';
+type Genre = 'any' | 'jazz' | 'blues' | 'rock' | 'pop' | 'folk' | 'metal' | 'extreme-metal';
 
-const genres: { value: Genre; label: string; description: string }[] = [
+const genres: { value: Genre; label: string; description: string; isPremium?: boolean }[] = [
   { value: 'any', label: 'Any Style', description: 'Random chord combinations' },
   { value: 'jazz', label: 'Jazz', description: 'Complex 7ths, 9ths, ii-V-I progressions' },
   { value: 'blues', label: 'Blues', description: 'Dominant 7ths, I-IV-V progressions' },
   { value: 'rock', label: 'Rock', description: 'Power chords, simple triads' },
   { value: 'pop', label: 'Pop', description: 'Catchy progressions like vi-IV-I-V' },
-  { value: 'folk', label: 'Folk', description: 'Simple triads, traditional patterns' }
+  { value: 'folk', label: 'Folk', description: 'Simple triads, traditional patterns' },
+  { value: 'metal', label: 'Metal', description: 'Power chords, chromatic riffs, aggressive progressions', isPremium: true },
+  { value: 'extreme-metal', label: 'Extreme Metal', description: 'Diminished, tritones, dissonant intervals', isPremium: true }
 ];
 
 export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProps) {
   const { isAuthenticated } = useAuth();
   const { hasActiveSubscription } = useSubscription();
   
-  const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random'>('single');
+  const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random' | 'tapping'>('single');
   const [selectedGenre, setSelectedGenre] = useState<Genre>('any');
   const [isRolling, setIsRolling] = useState(false);
   const [colorDiceValue, setColorDiceValue] = useState(4);
@@ -177,6 +179,43 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
             buildChord(7)          // V
           ];
         }
+      case 'metal':
+        if (isMinor) {
+          // i-♭VI-♭VII-i (minor metal power chord progression)
+          return [
+            buildChord(0, '5'),    // i5 (power chord)
+            buildChord(8, '5'),    // ♭VI5
+            buildChord(10, '5'),   // ♭VII5
+            buildChord(0, '5')     // i5
+          ];
+        } else {
+          // I-♭VII-♭VI-♭VII (major metal)
+          return [
+            buildChord(0, '5'),    // I5 (power chord)
+            buildChord(10, '5'),   // ♭VII5
+            buildChord(8, '5'),    // ♭VI5
+            buildChord(10, '5')    // ♭VII5
+          ];
+        }
+      case 'extreme-metal':
+        // Extreme metal uses aggressive diminished and chromatic patterns
+        if (isMinor) {
+          // i-♭ii-♭iii°-iv (chromatic extreme metal)
+          return [
+            buildChord(0, 'm'),    // i
+            buildChord(1, '5'),    // ♭ii5 (chromatic)
+            buildChord(3, '°'),    // ♭iii° (diminished)
+            buildChord(5, 'm')     // iv
+          ];
+        } else {
+          // I-♭ii-tritone-i (dissonant extreme metal)
+          return [
+            buildChord(0, '5'),    // I5
+            buildChord(1, '5'),    // ♭ii5 (chromatic)
+            buildChord(6, '°'),    // tritone diminished
+            buildChord(0, 'm')     // i (modal mixture)
+          ];
+        }
       default:
         // Random exotic chords for "any"
         const exoticTypes = Object.values(exoticNumbers);
@@ -277,11 +316,42 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
     return progression;
   };
 
+  const generateTappingChords = () => {
+    // Generate chord combinations optimized for double hand tapping techniques
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    // Chord types that work well for tapping (extended chords, wide intervals)
+    const tappingChordTypes = [
+      'add9', 'add11', 'maj9', 'maj11', 'maj13',  // Extended major chords
+      'm9', 'm11', 'm(maj7)', 'mMaj9',            // Extended minor chords  
+      '9', '11', '13', '7#11', '7b9', '7#9',      // Dominant extensions
+      'sus2', 'sus4', '7sus4', '7sus2',           // Suspended chords
+      'maj7#11', '6/9', 'm6/9', 'add13'          // Compound intervals
+    ];
+    
+    // Create a progression that flows well for tapping patterns
+    const progression: string[] = [];
+    const baseNote = notes[Math.floor(Math.random() * notes.length)];
+    const baseIndex = notes.indexOf(baseNote);
+    
+    // Build a progression with good voice leading for tapping
+    const intervals = [0, 5, 2, 7]; // I - IV - ii - V pattern but spread for tapping
+    
+    for (let i = 0; i < 4; i++) {
+      const noteIndex = (baseIndex + intervals[i]) % 12;
+      const note = notes[noteIndex];
+      const chordType = tappingChordTypes[Math.floor(Math.random() * tappingChordTypes.length)];
+      progression.push(note + chordType);
+    }
+    
+    return progression;
+  };
+
   const rollDice = () => {
     if (isRolling) return;
     
-    // Check if user clicked random mode without subscription
-    if (currentMode === 'random' && !hasActiveSubscription) {
+    // Check if user clicked premium modes without subscription
+    if ((currentMode === 'random' || currentMode === 'tapping') && !hasActiveSubscription) {
       onUpgrade?.();
       return;
     }
@@ -292,6 +362,10 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
       if (currentMode === 'random') {
         // Random mode - generate completely random chord progression
         const progression = generateRandomChords();
+        onResult({ type: 'riff', progression });
+      } else if (currentMode === 'tapping') {
+        // Tapping mode - generate double hand tapping chord combinations
+        const progression = generateTappingChords();
         onResult({ type: 'riff', progression });
       } else {
         // Normal dice-based generation
@@ -330,10 +404,24 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
           </SelectTrigger>
           <SelectContent>
             {genres.map((genre) => (
-              <SelectItem key={genre.value} value={genre.value}>
-                <div className="flex flex-col">
-                  <span className="font-medium">{genre.label}</span>
-                  <span className="text-xs text-muted-foreground">{genre.description}</span>
+              <SelectItem 
+                key={genre.value} 
+                value={genre.value}
+                disabled={genre.isPremium && !hasActiveSubscription}
+                className={genre.isPremium && !hasActiveSubscription ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{genre.label}</span>
+                      {genre.isPremium && (
+                        <Badge variant="secondary" className="h-4 px-1 flex items-center justify-center">
+                          <Crown className="h-2 w-2" />
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{genre.description}</span>
+                  </div>
                 </div>
               </SelectItem>
             ))}
@@ -367,7 +455,7 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
       </div>
 
       {/* Game Mode Buttons */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 mb-4">
         <Button
           variant={currentMode === 'single' ? 'default' : 'secondary'}
           className="py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs"
@@ -399,6 +487,27 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
           data-testid="button-random-mode"
         >
           <i className="fas fa-random mr-1"></i>Random
+          {!hasActiveSubscription && isAuthenticated && (
+            <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
+              <Crown className="h-2 w-2" />
+            </Badge>
+          )}
+        </Button>
+        <Button
+          variant={currentMode === 'tapping' ? 'default' : 'secondary'}
+          className={`py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs relative ${
+            !hasActiveSubscription && isAuthenticated ? 'pr-6' : ''
+          }`}
+          onClick={() => {
+            if (!hasActiveSubscription && isAuthenticated) {
+              onUpgrade?.();
+            } else {
+              setCurrentMode('tapping');
+            }
+          }}
+          data-testid="button-tapping-mode"
+        >
+          <i className="fas fa-guitar mr-1"></i>Tapping
           {!hasActiveSubscription && isAuthenticated && (
             <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
               <Crown className="h-2 w-2" />
