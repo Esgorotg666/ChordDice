@@ -350,8 +350,11 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
   const rollDice = () => {
     if (isRolling) return;
     
-    // Check if user clicked premium modes without subscription
-    if ((currentMode === 'random' || currentMode === 'tapping') && !hasActiveSubscription) {
+    // Check if user clicked premium modes or selected premium genres without subscription
+    const isPremiumMode = currentMode === 'random' || currentMode === 'tapping';
+    const isPremiumGenre = genres.find(g => g.value === selectedGenre)?.isPremium;
+    
+    if ((isPremiumMode || isPremiumGenre) && !hasActiveSubscription) {
       onUpgrade?.();
       return;
     }
@@ -407,8 +410,6 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
               <SelectItem 
                 key={genre.value} 
                 value={genre.value}
-                disabled={genre.isPremium && !hasActiveSubscription}
-                className={genre.isPremium && !hasActiveSubscription ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 <div className="flex items-center justify-between w-full">
                   <div className="flex flex-col">
@@ -475,10 +476,10 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
         <Button
           variant={currentMode === 'random' ? 'default' : 'secondary'}
           className={`py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs relative ${
-            !hasActiveSubscription && isAuthenticated ? 'pr-6' : ''
+            !hasActiveSubscription ? 'pr-6' : ''
           }`}
           onClick={() => {
-            if (!hasActiveSubscription && isAuthenticated) {
+            if (!hasActiveSubscription) {
               onUpgrade?.();
             } else {
               setCurrentMode('random');
@@ -487,7 +488,7 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
           data-testid="button-random-mode"
         >
           <i className="fas fa-random mr-1"></i>Random
-          {!hasActiveSubscription && isAuthenticated && (
+          {!hasActiveSubscription && (
             <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
               <Crown className="h-2 w-2" />
             </Badge>
@@ -496,10 +497,10 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
         <Button
           variant={currentMode === 'tapping' ? 'default' : 'secondary'}
           className={`py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs relative ${
-            !hasActiveSubscription && isAuthenticated ? 'pr-6' : ''
+            !hasActiveSubscription ? 'pr-6' : ''
           }`}
           onClick={() => {
-            if (!hasActiveSubscription && isAuthenticated) {
+            if (!hasActiveSubscription) {
               onUpgrade?.();
             } else {
               setCurrentMode('tapping');
@@ -508,7 +509,7 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
           data-testid="button-tapping-mode"
         >
           <i className="fas fa-guitar mr-1"></i>Tapping
-          {!hasActiveSubscription && isAuthenticated && (
+          {!hasActiveSubscription && (
             <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
               <Crown className="h-2 w-2" />
             </Badge>
