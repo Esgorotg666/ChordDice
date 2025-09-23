@@ -352,9 +352,9 @@ export default function ChatPage() {
                 
                 {/* Typing indicators */}
                 {typingUsers.length > 0 && (
-                  <div className="flex gap-3" data-testid="typing-indicator">
+                  <div className="flex gap-3" data-testid="typing-indicators">
                     <div className="h-8 w-8" /> {/* Spacer for avatar */}
-                    <div className="text-sm text-muted-foreground italic">
+                    <div className="text-sm text-muted-foreground italic" data-testid="typing-text">
                       {typingUsers.map(u => u.userName).join(", ")} 
                       {typingUsers.length === 1 ? " is" : " are"} typing...
                     </div>

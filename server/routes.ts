@@ -434,6 +434,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Handle unsupported methods for chat history endpoint
+  app.all('/api/chat/history', (req, res) => {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ 
+        message: `Method ${req.method} not allowed`,
+        allowedMethods: ['GET']
+      });
+    }
+  });
+
   app.post('/api/chat/upload-audio', 
     isAuthenticated,
     createRateLimitMiddleware(mutationRateLimiter, "audio upload"),
