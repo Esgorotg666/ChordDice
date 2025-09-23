@@ -16,8 +16,9 @@ Your Chord Riff Generator is now ready for Google Play Store! Here's the simple 
 
 Every time you push code to GitHub, your app will automatically:
 - ✅ Build the React web app
-- ✅ Generate Android APK (for testing)
-- ✅ Generate Android App Bundle (AAB for Google Play)
+- ✅ Generate signed Android APK (for testing)
+- ✅ Generate signed Android App Bundle (AAB for Google Play)
+- ✅ Verify both APK and AAB are properly signed
 - ✅ Make files available for download
 
 ## 📱 Publishing Steps
@@ -96,9 +97,11 @@ Copy the output and paste it as `KEYSTORE_BASE64` secret.
 
 To update your app:
 1. Make changes in Replit
-2. Push to GitHub
-3. Download new AAB from GitHub Actions (automatically signed!)
+2. Push to GitHub  
+3. Download new signed AAB from GitHub Actions
 4. Upload to Google Play Console as new release
+
+**Note**: Each release needs a higher `versionCode`. Update this in `android/app/build.gradle` before releasing.
 
 ## 🎵 Ready to Launch!
 

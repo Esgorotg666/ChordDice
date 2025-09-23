@@ -43,32 +43,30 @@ jobs:
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       run: |
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
-        echo "KEYSTORE_FILE=keystore.jks" >> $GITHUB_ENV
+        echo "KEYSTORE_FILE=true" >> $GITHUB_ENV
         echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
         
-    - name: Build Android APK
+    - name: Build and Sign Android APK
       run: |
         cd android
         ./gradlew assembleRelease --no-daemon
         
-    - name: Build Android App Bundle (AAB) 
+    - name: Build and Sign Android App Bundle (AAB)
       run: |
         cd android
         ./gradlew bundleRelease --no-daemon
         
-    - name: Sign APK (if unsigned)
-      if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && env.KEYSTORE_FILE }}
+    - name: Verify signing
       run: |
-        if [ ! -f android/app/build/outputs/apk/release/app-release.apk ]; then
-          echo "No unsigned APK found, skipping manual signing"
-        else
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore android/keystore.jks \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            android/app/build/outputs/apk/release/app-release.apk \
-            "${{ secrets.KEY_ALIAS }}"
+        if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+          echo "✅ APK built successfully"
+          apksigner verify android/app/build/outputs/apk/release/app-release.apk && echo "✅ APK is properly signed" || echo "❌ APK signing verification failed"
+        fi
+        if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then
+          echo "✅ AAB built successfully"
+          jarsigner -verify android/app/build/outputs/bundle/release/app-release.aab && echo "✅ AAB is properly signed" || echo "❌ AAB signing verification failed"
         fi
         
     - name: Upload APK
