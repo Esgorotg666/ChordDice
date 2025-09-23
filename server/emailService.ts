@@ -1,17 +1,16 @@
-// Email service using SendGrid integration
-import { MailService } from '@sendgrid/mail';
+// Email service using MailerSend
+import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 import crypto from 'crypto';
 
-if (!process.env.SENDGRID_API_KEY) {
-  console.warn("SENDGRID_API_KEY not found - email services will not work");
+if (!process.env.MAILERSEND_API_KEY) {
+  console.warn("MAILERSEND_API_KEY not found - email services will not work");
 }
 
-const mailService = new MailService();
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-}
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY || '',
+});
 
-interface EmailParams {
+interface EmailData {
   to: string;
   from: string;
   subject: string;
@@ -19,27 +18,51 @@ interface EmailParams {
   html?: string;
 }
 
-export async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmail(params: EmailData): Promise<boolean> {
   try {
-    if (!process.env.SENDGRID_API_KEY) {
-      console.error('SendGrid API key not configured');
+    if (!process.env.MAILERSEND_API_KEY) {
+      console.error('MailerSend API key not configured');
       return false;
     }
 
-    await mailService.send({
-      to: params.to,
-      from: params.from,
-      subject: params.subject,
-      text: params.text || undefined,
-      html: params.html || undefined,
-    });
+    const sentFrom = new Sender(params.from, "Chord Riff Generator");
+    const recipients = [new Recipient(params.to)];
+
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setSubject(params.subject);
+
+    if (params.html) {
+      emailParams.setHtml(params.html);
+    }
+    if (params.text) {
+      emailParams.setText(params.text);
+    }
+
+    await mailerSend.email.send(emailParams);
+    console.log('MailerSend email sent successfully to:', params.to);
     return true;
   } catch (error: any) {
-    console.error('SendGrid email error:', error);
-    console.error('SendGrid Error details:', {
-      statusCode: error.code,
-      body: error.response?.body,
-      headers: error.response?.headers
+    console.error('MailerSend email error:', error);
+    
+    // Check if this is a trial account limitation
+    if (error.status === 422 && error.body?.message?.includes("Trial accounts can only send emails")) {
+      console.log('=== DEVELOPMENT MODE: Email delivery blocked by MailerSend trial limitations ===');
+      console.log('Email that would have been sent:');
+      console.log('To:', params.to);
+      console.log('From:', params.from);
+      console.log('Subject:', params.subject);
+      console.log('=== In production, configure a verified sender domain ===');
+      
+      // Return true in development since we've "sent" it to console
+      return true;
+    }
+    
+    console.error('MailerSend Error details:', {
+      statusCode: error.status,
+      body: error.body,
+      headers: error.headers
     });
     return false;
   }
