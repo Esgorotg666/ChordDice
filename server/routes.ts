@@ -30,11 +30,22 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept only audio files
-    if (file.mimetype.startsWith('audio/')) {
+    // Strict whitelist of allowed audio MIME types
+    const allowedMimeTypes = [
+      'audio/mpeg',       // MP3
+      'audio/wav',        // WAV
+      'audio/ogg',        // OGG
+      'audio/mp4',        // M4A
+      'audio/aac',        // AAC
+      'audio/flac',       // FLAC
+      'audio/x-wav',      // Alternative WAV
+      'audio/x-mpeg',     // Alternative MP3
+    ];
+    
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      const error = new Error('Only audio files are allowed') as any;
+      const error = new Error(`File type ${file.mimetype} not allowed. Only audio files are permitted.`) as any;
       error.code = 'INVALID_FILE_TYPE';
       cb(error, false);
     }
@@ -448,13 +459,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Generate unique filename
-        const fileExtension = path.extname(req.file.originalname) || '.mp3';
-        const filename = `${randomUUID()}${fileExtension}`;
-        const filePath = path.join('uploads', 'chat', filename);
+        // Generate secure filename with whitelisted extensions
+        const allowedExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+        const originalExtension = path.extname(req.file.originalname).toLowerCase();
+        const safeExtension = allowedExtensions.includes(originalExtension) ? originalExtension : '.mp3';
+        
+        const filename = `${randomUUID()}${safeExtension}`;
+        const uploadDir = path.join(process.cwd(), 'uploads', 'chat');
+        const filePath = path.join(uploadDir, filename);
+        
+        // Ensure upload directory exists
+        await fs.mkdir(uploadDir, { recursive: true });
+        
+        // Validate that final path is within expected directory (prevent path traversal)
+        const resolvedPath = path.resolve(filePath);
+        const resolvedUploadDir = path.resolve(uploadDir);
+        if (!resolvedPath.startsWith(resolvedUploadDir)) {
+          return res.status(400).json({ message: "Invalid file path" });
+        }
 
         // Save file to disk
-        await fs.writeFile(filePath, req.file.buffer);
+        await fs.writeFile(resolvedPath, req.file.buffer);
 
         // Create chat message with audio
         const chatMessage = await storage.createChatMessage({
