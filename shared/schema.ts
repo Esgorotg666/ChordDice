@@ -14,11 +14,19 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - Updated for Replit Auth and subscriptions
+// User storage table - Updated for custom auth with email verification
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  // Replit Auth fields
-  email: varchar("email").unique(),
+  // Custom auth fields
+  username: varchar("username").unique().notNull(),
+  email: varchar("email").unique().notNull(),
+  password: text("password").notNull(),
+  isEmailVerified: boolean("is_email_verified").default(false),
+  emailVerificationToken: varchar("email_verification_token"),
+  emailVerificationExpiry: timestamp("email_verification_expiry"),
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry"),
+  // Legacy Replit Auth fields (optional for migration)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -40,9 +48,6 @@ export const users = pgTable("users", {
   referralCode: varchar("referral_code", { length: 20 }).unique(),
   referredBy: varchar("referred_by", { length: 20 }),
   referralRewardsEarned: integer("referral_rewards_earned").default(0),
-  // Legacy fields (keeping for backward compatibility)
-  username: text("username").unique(),
-  password: text("password"),
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -88,19 +93,33 @@ export const chatMessages = pgTable("chat_messages", {
   index("IDX_chat_messages_user").on(table.userId),
 ]);
 
-// Schema for Replit Auth user upsert
-export const upsertUserSchema = createInsertSchema(users).pick({
-  id: true,
+// Schema for user registration
+export const registerUserSchema = createInsertSchema(users).pick({
+  username: true,
   email: true,
-  firstName: true,
-  lastName: true,
-  profileImageUrl: true,
+  password: true,
 });
 
-// Schema for legacy user creation (backward compatibility)
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// Schema for user login
+export const loginUserSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+// Schema for email verification
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
+
+// Schema for password reset request
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Valid email is required"),
+});
+
+// Schema for password reset
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export const insertChordProgressionSchema = createInsertSchema(chordProgressions).pick({
@@ -129,8 +148,11 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
   mimeType: true,
 });
 
-export type UpsertUser = z.infer<typeof upsertUserSchema>;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type RegisterUser = z.infer<typeof registerUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
+export type VerifyEmail = z.infer<typeof verifyEmailSchema>;
+export type ForgotPassword = z.infer<typeof forgotPasswordSchema>;
+export type ResetPassword = z.infer<typeof resetPasswordSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChordProgression = z.infer<typeof insertChordProgressionSchema>;
 export type ChordProgression = typeof chordProgressions.$inferSelect;

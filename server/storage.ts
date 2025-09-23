@@ -1,7 +1,6 @@
 import { 
   type User, 
-  type InsertUser, 
-  type UpsertUser,
+  type RegisterUser,
   type ChordProgression, 
   type InsertChordProgression,
   type Referral,
@@ -18,15 +17,20 @@ import { db } from "./db";
 import { eq, and, sql, desc, lt } from "drizzle-orm";
 
 export interface IStorage {
-  // Auth methods (required for Replit Auth)
+  // Custom auth methods
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: RegisterUser): Promise<User>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<User | undefined>;
+  setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined>;
+  verifyEmailWithToken(token: string): Promise<User | undefined>;
+  setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined>;
+  resetPasswordWithToken(token: string, hashedPassword: string): Promise<User | undefined>;
+  
+  // Subscription methods
   updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<User | undefined>;
   updateSubscriptionStatus(userId: string, status: string, expiry?: Date): Promise<User | undefined>;
-  
-  // Legacy auth methods (backward compatibility)
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
   
   // Usage tracking methods
   incrementDiceRoll(userId: string): Promise<User | undefined>;
@@ -55,23 +59,103 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Auth methods (required for Replit Auth)
+  // Custom auth methods
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    if (!username) return undefined;
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!email) return undefined;
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: RegisterUser): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+      .returning();
+    return user;
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
       })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        emailVerificationToken: token,
+        emailVerificationExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async verifyEmailWithToken(token: string): Promise<User | undefined> {
+    if (!token) return undefined;
+    const [user] = await db
+      .update(users)
+      .set({
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(users.emailVerificationToken, token),
+        sql`${users.emailVerificationExpiry} > NOW()`
+      ))
+      .returning();
+    return user;
+  }
+
+  async setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined> {
+    if (!email) return undefined;
+    const [user] = await db
+      .update(users)
+      .set({
+        passwordResetToken: token,
+        passwordResetExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.email, email))
+      .returning();
+    return user;
+  }
+
+  async resetPasswordWithToken(token: string, hashedPassword: string): Promise<User | undefined> {
+    if (!token) return undefined;
+    const [user] = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(users.passwordResetToken, token),
+        sql`${users.passwordResetExpiry} > NOW()`
+      ))
       .returning();
     return user;
   }
@@ -102,20 +186,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Legacy auth methods (backward compatibility)
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    if (!username) return undefined;
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
-  }
 
   // Usage tracking methods
   async canUseDiceRoll(userId: string): Promise<boolean> {
