@@ -6,6 +6,12 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter } from "./middleware/rateLimiter";
 import { z } from "zod";
 import Stripe from "stripe";
+import multer from "multer";
+import { parseBuffer } from "music-metadata";
+import { randomUUID } from "crypto";
+import path from "path";
+import fs from "fs/promises";
+import express from "express";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -13,6 +19,22 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
+});
+
+// Configure multer for audio file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only audio files
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'), false);
+    }
+  }
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -368,6 +390,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch favorite progressions" });
     }
   });
+
+  // Serve static audio files
+  app.use('/uploads', express.static('uploads', {
+    setHeaders: (res, path) => {
+      res.set('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+    }
+  }));
+
+  // Chat endpoints
+  app.get('/api/chat/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const roomId = req.query.room || 'public';
+      const limit = parseInt(req.query.limit as string) || 50;
+      const before = req.query.before ? new Date(req.query.before as string) : undefined;
+      
+      const messages = await storage.getChatHistory(roomId, limit, before);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+
+  app.post('/api/chat/upload-audio', 
+    isAuthenticated,
+    createRateLimitMiddleware(mutationRateLimiter, "audio upload"),
+    upload.single('audio'),
+    async (req: any, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No audio file provided" });
+        }
+
+        const userId = req.user.claims.sub;
+        const roomId = req.body.roomId || 'public';
+
+        // Validate audio duration using music-metadata
+        const metadata = await parseBuffer(req.file.buffer, req.file.mimetype);
+        const duration = metadata.format.duration;
+
+        if (!duration || duration > 30) {
+          return res.status(400).json({ 
+            message: "Audio file must be 30 seconds or less",
+            maxDuration: 30,
+            fileDuration: duration 
+          });
+        }
+
+        // Generate unique filename
+        const fileExtension = path.extname(req.file.originalname) || '.mp3';
+        const filename = `${randomUUID()}${fileExtension}`;
+        const filePath = path.join('uploads', 'chat', filename);
+
+        // Save file to disk
+        await fs.writeFile(filePath, req.file.buffer);
+
+        // Create chat message with audio
+        const chatMessage = await storage.createChatMessage({
+          roomId,
+          userId,
+          content: null, // Audio-only message
+          audioUrl: `/uploads/chat/${filename}`,
+          audioDurationSec: Math.round(duration),
+          mimeType: req.file.mimetype
+        });
+
+        res.json({
+          message: "Audio uploaded successfully",
+          chatMessage: {
+            ...chatMessage,
+            user: {
+              id: req.user.claims.sub,
+              firstName: req.user.claims.first_name || 'Unknown',
+              lastName: req.user.claims.last_name || '',
+              profileImageUrl: req.user.claims.profile_image_url
+            }
+          }
+        });
+
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+        res.status(500).json({ message: "Failed to upload audio file" });
+      }
+    }
+  );
+
+  app.post('/api/chat/message', 
+    isAuthenticated,
+    createRateLimitMiddleware(mutationRateLimiter, "chat message"),
+    async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        
+        // Validate request body
+        const messageSchema = z.object({
+          roomId: z.string().default('public'),
+          content: z.string().min(1, "Message content is required").max(1000, "Message too long")
+        });
+        
+        const validatedData = messageSchema.parse(req.body);
+        
+        const chatMessage = await storage.createChatMessage({
+          roomId: validatedData.roomId,
+          userId,
+          content: validatedData.content,
+          audioUrl: null,
+          audioDurationSec: null,
+          mimeType: null
+        });
+
+        res.json({
+          message: "Message sent successfully",
+          chatMessage: {
+            ...chatMessage,
+            user: {
+              id: req.user.claims.sub,
+              firstName: req.user.claims.first_name || 'Unknown',
+              lastName: req.user.claims.last_name || '',
+              profileImageUrl: req.user.claims.profile_image_url
+            }
+          }
+        });
+
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ 
+            message: "Invalid message data", 
+            errors: error.errors 
+          });
+        }
+        console.error("Error sending message:", error);
+        res.status(500).json({ message: "Failed to send message" });
+      }
+    }
+  );
 
   const httpServer = createServer(app);
   return httpServer;
