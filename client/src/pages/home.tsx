@@ -134,7 +134,10 @@ export default function Home() {
 
       <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Dice Interface */}
-        <DiceInterface onResult={handleDiceResult} />
+        <DiceInterface 
+          onResult={handleDiceResult} 
+          onUpgrade={() => setShowSubscriptionModal(true)} 
+        />
 
         {/* Result Display */}
         {result && result.type === 'single' && (

@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Crown } from "lucide-react";
 import { colorGroups, exoticNumbers } from "@/lib/music-data";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface DiceInterfaceProps {
   onResult: (result: { type: 'single' | 'riff'; chord?: string; colorName?: string; progression?: string[] }) => void;
+  onUpgrade?: () => void;
 }
 
 type Genre = 'any' | 'jazz' | 'blues' | 'rock' | 'pop' | 'folk';
@@ -18,8 +23,11 @@ const genres: { value: Genre; label: string; description: string }[] = [
   { value: 'folk', label: 'Folk', description: 'Simple triads, traditional patterns' }
 ];
 
-export default function DiceInterface({ onResult }: DiceInterfaceProps) {
-  const [currentMode, setCurrentMode] = useState<'single' | 'riff'>('single');
+export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProps) {
+  const { isAuthenticated } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
+  
+  const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random'>('single');
   const [selectedGenre, setSelectedGenre] = useState<Genre>('any');
   const [isRolling, setIsRolling] = useState(false);
   const [colorDiceValue, setColorDiceValue] = useState(4);
@@ -249,25 +257,58 @@ export default function DiceInterface({ onResult }: DiceInterfaceProps) {
     }
   };
 
+  const generateRandomChords = () => {
+    // Completely random chord generation for premium users
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const allChordTypes = [
+      '', 'm', '7', 'M7', 'm7', '6', 'm6', '9', 'm9', 'add9', 'sus2', 'sus4', 
+      '°', '+', 'dim7', 'm7b5', '11', '13', 'maj9', 'maj11', 'maj13',
+      '7sus4', '7sus2', 'add11', 'add13', '6/9', 'm6/9', 'alt', '7#5', '7b5',
+      'm(maj7)', 'mMaj9', '7#9', '7b9', '7#11', 'maj7#11'
+    ];
+    
+    const progression: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const randomNote = notes[Math.floor(Math.random() * notes.length)];
+      const randomType = allChordTypes[Math.floor(Math.random() * allChordTypes.length)];
+      progression.push(randomNote + randomType);
+    }
+    
+    return progression;
+  };
+
   const rollDice = () => {
     if (isRolling) return;
+    
+    // Check if user clicked random mode without subscription
+    if (currentMode === 'random' && !hasActiveSubscription) {
+      onUpgrade?.();
+      return;
+    }
     
     setIsRolling(true);
 
     setTimeout(() => {
-      const colorRoll = Math.floor(Math.random() * 8) + 1;
-      const numberRoll = Math.floor(Math.random() * 8) + 1;
-      
-      setColorDiceValue(colorRoll);
-      setNumberDiceValue(numberRoll);
-
-      const { chord, colorName } = generateChord(colorRoll, numberRoll);
-
-      if (currentMode === 'single') {
-        onResult({ type: 'single', chord, colorName });
-      } else {
-        const progression = generateRiff(colorRoll, numberRoll);
+      if (currentMode === 'random') {
+        // Random mode - generate completely random chord progression
+        const progression = generateRandomChords();
         onResult({ type: 'riff', progression });
+      } else {
+        // Normal dice-based generation
+        const colorRoll = Math.floor(Math.random() * 8) + 1;
+        const numberRoll = Math.floor(Math.random() * 8) + 1;
+        
+        setColorDiceValue(colorRoll);
+        setNumberDiceValue(numberRoll);
+
+        const { chord, colorName } = generateChord(colorRoll, numberRoll);
+
+        if (currentMode === 'single') {
+          onResult({ type: 'single', chord, colorName });
+        } else {
+          const progression = generateRiff(colorRoll, numberRoll);
+          onResult({ type: 'riff', progression });
+        }
       }
       
       setIsRolling(false);
@@ -326,22 +367,43 @@ export default function DiceInterface({ onResult }: DiceInterfaceProps) {
       </div>
 
       {/* Game Mode Buttons */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <Button
           variant={currentMode === 'single' ? 'default' : 'secondary'}
-          className="py-3 px-4 font-medium transition-all transform active:scale-95 min-h-[48px]"
+          className="py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs"
           onClick={() => setCurrentMode('single')}
           data-testid="button-single-roll"
         >
-          <i className="fas fa-dice-one mr-2"></i>Single Roll
+          <i className="fas fa-dice-one mr-1"></i>Single
         </Button>
         <Button
           variant={currentMode === 'riff' ? 'default' : 'secondary'}
-          className="py-3 px-4 font-medium transition-all transform active:scale-95 min-h-[48px]"
+          className="py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs"
           onClick={() => setCurrentMode('riff')}
           data-testid="button-riff-mode"
         >
-          <i className="fas fa-music mr-2"></i>Riff Mode
+          <i className="fas fa-music mr-1"></i>Riff
+        </Button>
+        <Button
+          variant={currentMode === 'random' ? 'default' : 'secondary'}
+          className={`py-3 px-2 font-medium transition-all transform active:scale-95 min-h-[48px] text-xs relative ${
+            !hasActiveSubscription && isAuthenticated ? 'pr-6' : ''
+          }`}
+          onClick={() => {
+            if (!hasActiveSubscription && isAuthenticated) {
+              onUpgrade?.();
+            } else {
+              setCurrentMode('random');
+            }
+          }}
+          data-testid="button-random-mode"
+        >
+          <i className="fas fa-random mr-1"></i>Random
+          {!hasActiveSubscription && isAuthenticated && (
+            <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
+              <Crown className="h-2 w-2" />
+            </Badge>
+          )}
         </Button>
       </div>
 
