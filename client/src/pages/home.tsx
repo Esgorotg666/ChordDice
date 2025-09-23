@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Settings, Crown, User, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link } from "wouter";
+import { Settings, Crown, User, LogOut, Users } from "lucide-react";
 import DiceInterface from "@/components/dice-interface";
 import ChordChart from "@/components/chord-chart";
 import PentatonicGuide from "@/components/pentatonic-guide";
@@ -10,9 +11,12 @@ import SubscriptionModal from "@/components/subscription-modal";
 import AuthGate from "@/components/auth-gate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { getChordDiagram } from "@/lib/music-data";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import studioBackground from "@assets/stock_images/music_studio_dark_ba_409f6849.jpg";
 
 interface GeneratedResult {
@@ -25,6 +29,7 @@ interface GeneratedResult {
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { hasActiveSubscription } = useSubscription();
+  const { toast } = useToast();
   
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [showRiffModal, setShowRiffModal] = useState(false);
@@ -32,6 +37,39 @@ export default function Home() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [currentChord, setCurrentChord] = useState<string>('');
   const [selectedChord, setSelectedChord] = useState<string>('');
+
+  // Mutation to apply referral code after login
+  const applyReferralMutation = useMutation({
+    mutationFn: (referralCode: string) => 
+      apiRequest('POST', '/api/referrals/apply', { referralCode }),
+    onSuccess: () => {
+      // Clear the pending referral code only after successful application
+      sessionStorage.removeItem('pendingReferralCode');
+      toast({
+        title: "Referral code applied!",
+        description: "Welcome! Your friend will get rewarded when you upgrade to Premium.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Referral code issue",
+        description: error.message || "Could not apply referral code, but you can still use the app!",
+        variant: "destructive",
+      });
+      // Keep the code in sessionStorage for potential retry
+    },
+  });
+
+  // Process pending referral code after authentication
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const pendingReferralCode = sessionStorage.getItem('pendingReferralCode');
+      if (pendingReferralCode && !applyReferralMutation.isPending) {
+        // Apply the referral code (don't clear until success)
+        applyReferralMutation.mutate(pendingReferralCode);
+      }
+    }
+  }, [isAuthenticated, isLoading]);
 
   const handleDiceResult = (result: GeneratedResult) => {
     setResult(result);
@@ -211,6 +249,14 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-3">
             <Button 
               variant="secondary" 
+              className="w-full py-3 px-4 hover:bg-accent hover:text-accent-foreground transition-all transform active:scale-95"
+              data-testid="button-referrals"
+              onClick={() => window.location.href = '/referrals'}
+            >
+              <Users className="mr-2 h-4 w-4" />Referrals
+            </Button>
+            <Button 
+              variant="secondary" 
               className="py-3 px-4 hover:bg-accent hover:text-accent-foreground transition-all transform active:scale-95"
               data-testid="button-history"
             >
@@ -229,13 +275,6 @@ export default function Home() {
               data-testid="button-share"
             >
               <i className="fas fa-share-alt mr-2"></i>Share
-            </Button>
-            <Button 
-              variant="secondary" 
-              className="py-3 px-4 hover:bg-accent hover:text-accent-foreground transition-all transform active:scale-95"
-              data-testid="button-audio"
-            >
-              <i className="fas fa-volume-up mr-2"></i>Audio
             </Button>
           </div>
         </div>

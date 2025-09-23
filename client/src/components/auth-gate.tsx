@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Music, Crown, Users, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Music, Crown, Users, Zap, Gift } from "lucide-react";
 
 interface AuthGateProps {
   isOpen: boolean;
@@ -11,9 +13,25 @@ interface AuthGateProps {
 
 export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [showReferralInput, setShowReferralInput] = useState(false);
+
+  // Check URL for referral code
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase());
+      setShowReferralInput(true);
+    }
+  }, []);
 
   const handleSignUp = () => {
     setIsSigningUp(true);
+    // If there's a referral code, store it in sessionStorage for processing after login
+    if (referralCode.trim()) {
+      sessionStorage.setItem('pendingReferralCode', referralCode.trim().toUpperCase());
+    }
     // Redirect to Replit Auth login
     window.location.href = '/api/login';
   };
@@ -96,6 +114,62 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
               <p>• Refer friends for free months</p>
               <p>• Future guitar tuner</p>
             </div>
+          </div>
+
+          {/* Referral Code Section */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Have a referral code?</span>
+              </div>
+              {!showReferralInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowReferralInput(true)}
+                  data-testid="button-show-referral-input"
+                >
+                  Add Code
+                </Button>
+              )}
+            </div>
+            
+            {showReferralInput && (
+              <div className="space-y-2">
+                <Label htmlFor="referral-code" className="text-sm">
+                  Referral Code (Optional)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="referral-code"
+                    placeholder="Enter referral code"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    className="flex-1"
+                    data-testid="input-referral-code"
+                  />
+                  {referralCode && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setReferralCode('');
+                        setShowReferralInput(false);
+                      }}
+                      data-testid="button-clear-referral"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                {referralCode && (
+                  <p className="text-xs text-muted-foreground">
+                    Your friend will get 1 month free when you upgrade to Premium!
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sign Up Button */}
