@@ -19,7 +19,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-08-27.basil",
 });
 
 // Configure multer for audio file uploads
@@ -33,7 +33,9 @@ const upload = multer({
     if (file.mimetype.startsWith('audio/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only audio files are allowed'), false);
+      const error = new Error('Only audio files are allowed') as any;
+      error.code = 'INVALID_FILE_TYPE';
+      cb(error, false);
     }
   }
 });
@@ -276,10 +278,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (dbUser?.stripeSubscriptionId) {
       const subscription = await stripe.subscriptions.retrieve(dbUser.stripeSubscriptionId);
+      
+      const latestInvoice = typeof subscription.latest_invoice === 'object' ? subscription.latest_invoice : null;
+      const paymentIntent = latestInvoice && typeof (latestInvoice as any).payment_intent === 'object' ? (latestInvoice as any).payment_intent : null;
 
       res.send({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret: paymentIntent?.client_secret,
       });
       return;
     }
@@ -311,10 +316,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiryDate = new Date();
       expiryDate.setMonth(expiryDate.getMonth() + 1); // Monthly subscription
       await storage.updateSubscriptionStatus(userId, 'active', expiryDate);
+      
+      const latestInvoice = typeof subscription.latest_invoice === 'object' ? subscription.latest_invoice : null;
+      const paymentIntent = latestInvoice && typeof (latestInvoice as any).payment_intent === 'object' ? (latestInvoice as any).payment_intent : null;
   
       res.send({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret: paymentIntent?.client_secret,
       });
     } catch (error: any) {
       console.error("Stripe subscription error:", error);
