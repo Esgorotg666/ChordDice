@@ -32,8 +32,8 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
     if (referralCode.trim()) {
       sessionStorage.setItem('pendingReferralCode', referralCode.trim().toUpperCase());
     }
-    // Redirect to Replit Auth login
-    window.location.href = '/api/login';
+    // Redirect to custom signup page
+    window.location.href = '/signup';
   };
 
   return (
@@ -173,7 +173,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
           </div>
 
           {/* Sign Up Button */}
-          <div className="sticky bottom-0 bg-background pt-2 pb-2">
+          <div className="sticky bottom-0 bg-background pt-2 pb-2 space-y-2">
             <Button 
               className="w-full py-4 sm:py-6 text-base sm:text-lg font-semibold" 
               onClick={handleSignUp}
@@ -183,15 +183,27 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
             {isSigningUp ? (
               <>
                 <div className="animate-spin w-5 h-5 border-2 border-white/20 border-t-white rounded-full mr-2" />
-                Signing you up...
+                Redirecting...
               </>
             ) : (
               <>
                 <Music className="mr-2 h-5 w-5" />
-                Start Creating Music - Free
+                Create Account - Free
               </>
             )}
             </Button>
+            
+            <div className="text-center">
+              <span className="text-sm text-muted-foreground">Already have an account? </span>
+              <Button 
+                variant="link" 
+                className="p-0 h-auto font-normal text-sm"
+                onClick={() => window.location.href = '/login'}
+                data-testid="button-login"
+              >
+                Sign in here
+              </Button>
+            </div>
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
