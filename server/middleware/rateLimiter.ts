@@ -71,6 +71,7 @@ class RateLimiter {
 export const mutationRateLimiter = new RateLimiter(60000, 20); // 20 requests per minute
 export const referralRateLimiter = new RateLimiter(300000, 5); // 5 requests per 5 minutes
 export const socketConnectionLimiter = new RateLimiter(60000, 10); // 10 connections per minute per IP
+export const socketEventLimiter = new RateLimiter(60000, 30); // 30 events per minute per user for Socket.IO events
 
 // Middleware factory
 export function createRateLimitMiddleware(rateLimiter: RateLimiter, action: string) {

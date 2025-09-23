@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, getSession } from "./replitAuth";
-import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter, socketConnectionLimiter } from "./middleware/rateLimiter";
+import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter, socketConnectionLimiter, socketEventLimiter } from "./middleware/rateLimiter";
 import { csrfProtection } from "./middleware/csrfProtection";
 import { z } from "zod";
 import Stripe from "stripe";
