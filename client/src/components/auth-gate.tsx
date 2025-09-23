@@ -38,9 +38,9 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden" data-testid="auth-gate-modal">
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] p-0 overflow-hidden" data-testid="auth-gate-modal">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 sm:p-6">
           <DialogHeader className="text-center space-y-2">
             <div className="flex justify-center mb-2">
               <div className="bg-white/20 rounded-full p-3">
@@ -57,15 +57,15 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
         </div>
 
         {/* Content Section */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
           {/* Free Features */}
           <div>
             <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
               <Zap className="h-5 w-5 text-primary" />
               Start Free Today
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
                 <div className="bg-primary/10 rounded-full p-2">
                   <Music className="h-4 w-4 text-primary" />
                 </div>
@@ -74,7 +74,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
                   <p className="text-sm text-muted-foreground">Create chord progressions instantly</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
                 <div className="bg-primary/10 rounded-full p-2">
                   <Users className="h-4 w-4 text-primary" />
                 </div>
@@ -83,7 +83,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
                   <p className="text-sm text-muted-foreground">Jazz, Blues, Rock, Pop, Folk</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
                 <div className="bg-primary/10 rounded-full p-2">
                   <Zap className="h-4 w-4 text-primary" />
                 </div>
@@ -98,7 +98,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
           {/* Premium Preview */}
           <div className="border-t pt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
+              <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
                 <Crown className="h-5 w-5 text-amber-500" />
                 Premium Features
               </h3>
@@ -173,11 +173,12 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
           </div>
 
           {/* Sign Up Button */}
-          <Button 
-            className="w-full py-6 text-lg font-semibold" 
-            onClick={handleSignUp}
-            disabled={isSigningUp}
-            data-testid="button-sign-up"
+          <div className="sticky bottom-0 bg-background pt-2 pb-2">
+            <Button 
+              className="w-full py-4 sm:py-6 text-base sm:text-lg font-semibold" 
+              onClick={handleSignUp}
+              disabled={isSigningUp}
+              data-testid="button-sign-up"
           >
             {isSigningUp ? (
               <>
@@ -190,7 +191,8 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
                 Start Creating Music - Free
               </>
             )}
-          </Button>
+            </Button>
+          </div>
 
           <p className="text-xs text-center text-muted-foreground">
             By signing up, you agree to our Terms of Service and Privacy Policy
