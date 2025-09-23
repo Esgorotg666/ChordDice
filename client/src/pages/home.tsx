@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { getChordDiagram } from "@/lib/music-data";
+import studioBackground from "@assets/stock_images/music_studio_dark_ba_409f6849.jpg";
 
 interface GeneratedResult {
   type: 'single' | 'riff';
@@ -57,9 +58,22 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-background text-foreground min-h-screen">
-      {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-50">
+    <div 
+      className="bg-background text-foreground min-h-screen relative"
+      style={{
+        backgroundImage: `url(${studioBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Background Overlay */}
+      <div className="absolute inset-0 bg-background/85 backdrop-blur-sm z-0"></div>
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="bg-card/90 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -227,11 +241,12 @@ export default function Home() {
         chordName={currentChord}
       />
 
-      {/* Subscription Modal */}
-      <SubscriptionModal
-        open={showSubscriptionModal}
-        onOpenChange={setShowSubscriptionModal}
-      />
+        {/* Subscription Modal */}
+        <SubscriptionModal
+          open={showSubscriptionModal}
+          onOpenChange={setShowSubscriptionModal}
+        />
+      </div>
     </div>
   );
 }
