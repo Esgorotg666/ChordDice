@@ -44,9 +44,7 @@ export function useUsageTracking() {
   // Increment dice roll usage
   const incrementDiceRollMutation = useMutation({
     mutationFn: async (): Promise<DiceRollResult> => {
-      const response = await apiRequest('/api/usage/increment-dice-roll', {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', '/api/usage/increment-dice-roll');
       
       if (!response.ok) {
         const error = await response.json();
@@ -64,9 +62,7 @@ export function useUsageTracking() {
   // Watch ad for reward
   const watchAdMutation = useMutation({
     mutationFn: async (): Promise<AdRewardResult> => {
-      const response = await apiRequest('/api/usage/watch-ad-reward', {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', '/api/usage/watch-ad-reward');
       
       if (!response.ok) {
         const error = await response.json();

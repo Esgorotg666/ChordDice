@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Crown } from "lucide-react";
+import { Crown, Play, Eye } from "lucide-react";
 import { colorGroups, exoticNumbers } from "@/lib/music-data";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -36,7 +36,11 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
     incrementDiceRoll,
     isIncrementingRoll,
     incrementError,
-    hasWatchedMaxAds
+    hasWatchedMaxAds,
+    watchAd,
+    isWatchingAd,
+    adError,
+    extraTokens
   } = useUsageTracking();
   
   const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random' | 'tapping'>('single');
@@ -573,19 +577,60 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
             />
           </div>
           
-          {/* Low usage warning */}
-          {remainingRolls <= 1 && remainingRolls > 0 && (
-            <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-              <i className="fas fa-exclamation-triangle"></i>
-              Almost out! Watch ads for more or upgrade to premium.
+          {/* Extra tokens display */}
+          {extraTokens > 0 && (
+            <div className="mt-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+              <i className="fas fa-plus-circle"></i>
+              +{extraTokens} bonus roll{extraTokens > 1 ? 's' : ''} from ads
             </div>
           )}
           
-          {/* No rolls left */}
-          {remainingRolls === 0 && (
+          {/* Ad watch section */}
+          {remainingRolls <= 2 && !hasWatchedMaxAds && (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Get more rolls</span>
+                <span className="text-xs text-muted-foreground">{usageStatus?.adsWatchedCount || 0}/5 ads today</span>
+              </div>
+              <Button
+                onClick={async () => {
+                  try {
+                    await watchAd();
+                  } catch (error) {
+                    console.error('Error watching ad:', error);
+                  }
+                }}
+                disabled={isWatchingAd || hasWatchedMaxAds}
+                variant="outline"
+                size="sm"
+                className="w-full"
+                data-testid="button-watch-ad"
+              >
+                {isWatchingAd ? (
+                  <>
+                    <Play className="h-3 w-3 mr-1 animate-pulse" />
+                    Watching Ad...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-3 w-3 mr-1" />
+                    Watch Ad (+1 Roll)
+                  </>
+                )}
+              </Button>
+              {adError && (
+                <div className="text-xs text-red-600 dark:text-red-400">
+                  Error: {adError}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* No rolls left message */}
+          {remainingRolls === 0 && hasWatchedMaxAds && (
             <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
               <i className="fas fa-times-circle"></i>
-              No free rolls left. Watch ads or upgrade to premium for unlimited access.
+              No rolls left. Daily limit reached. Upgrade to premium for unlimited access.
             </div>
           )}
         </div>
