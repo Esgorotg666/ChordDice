@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, getSession } from "./replitAuth";
 import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter, socketConnectionLimiter } from "./middleware/rateLimiter";
+import { csrfProtection } from "./middleware/csrfProtection";
 import { z } from "zod";
 import Stripe from "stripe";
 import multer from "multer";
@@ -140,6 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/usage/increment-dice-roll', 
     isAuthenticated, 
+    csrfProtection,
     createRateLimitMiddleware(mutationRateLimiter, "dice roll"), 
     async (req: any, res) => {
     try {
@@ -181,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // TEMPORARILY DISABLED: Ad endpoint has security vulnerability
   // TODO: Implement proper ad verification with third-party SDK attestation before re-enabling
-  app.post('/api/usage/watch-ad-reward', isAuthenticated, async (req: any, res) => {
+  app.post('/api/usage/watch-ad-reward', isAuthenticated, csrfProtection, async (req: any, res) => {
     res.status(503).json({ 
       message: "Ad system temporarily disabled for security improvements. Please upgrade to Premium for unlimited generations.",
       success: false,
@@ -210,6 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/referrals/generate-code', 
     isAuthenticated, 
+    csrfProtection,
     createRateLimitMiddleware(referralRateLimiter, "generate referral code"), 
     async (req: any, res) => {
     try {
@@ -241,6 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/referrals/apply', 
     isAuthenticated, 
+    csrfProtection,
     createRateLimitMiddleware(referralRateLimiter, "referral apply"), 
     async (req: any, res) => {
     try {
@@ -279,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This endpoint is removed for security - referral rewards will be processed automatically
 
   // Stripe subscription route
-  app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
+  app.post('/api/create-subscription', isAuthenticated, csrfProtection, async (req: any, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
     }
@@ -352,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/chord-progressions", async (req, res) => {
+  app.post("/api/chord-progressions", csrfProtection, async (req, res) => {
     try {
       const validatedData = insertChordProgressionSchema.parse(req.body);
       const progression = await storage.createChordProgression(validatedData);
@@ -446,6 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/chat/upload-audio', 
     isAuthenticated,
+    csrfProtection,
     createRateLimitMiddleware(mutationRateLimiter, "audio upload"),
     upload.single('audio'),
     async (req: any, res) => {
@@ -531,6 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/chat/message', 
     isAuthenticated,
+    csrfProtection,
     createRateLimitMiddleware(mutationRateLimiter, "chat message"),
     async (req: any, res) => {
       try {
