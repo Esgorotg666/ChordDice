@@ -1,0 +1,332 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import { storage } from './storage';
+import { 
+  registerUserSchema,
+  loginUserSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  type RegisterUser,
+  type LoginUser,
+  type VerifyEmail,
+  type ForgotPassword,
+  type ResetPassword
+} from '@shared/schema';
+import { 
+  sendVerificationEmail, 
+  sendPasswordResetEmail, 
+  generateVerificationToken, 
+  generatePasswordResetToken 
+} from './emailService';
+
+const router = Router();
+
+// User registration endpoint
+router.post('/register', async (req, res) => {
+  try {
+    const userData = registerUserSchema.parse(req.body);
+    
+    // Check if username already exists
+    const existingUserByUsername = await storage.getUserByUsername(userData.username);
+    if (existingUserByUsername) {
+      return res.status(400).json({ message: 'Username already exists' });
+    }
+    
+    // Check if email already exists
+    const existingUserByEmail = await storage.getUserByEmail(userData.email);
+    if (existingUserByEmail) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+    
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+    
+    // Create user
+    const user = await storage.createUser({
+      username: userData.username,
+      email: userData.email,
+      password: hashedPassword,
+    });
+    
+    // Generate email verification token
+    const verificationToken = generateVerificationToken();
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    await storage.setEmailVerificationToken(user.id, verificationToken, verificationExpiry);
+    
+    // Send verification email
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const emailSent = await sendVerificationEmail(
+      user.email,
+      user.username,
+      verificationToken,
+      baseUrl
+    );
+    
+    if (!emailSent) {
+      console.error('Failed to send verification email');
+    }
+    
+    res.status(201).json({ 
+      message: 'Account created successfully! Please check your email to verify your account.',
+      requiresVerification: true
+    });
+    
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    if (error.issues) {
+      return res.status(400).json({ 
+        message: 'Invalid input',
+        errors: error.issues.map((issue: any) => issue.message)
+      });
+    }
+    res.status(500).json({ message: 'Registration failed' });
+  }
+});
+
+// User login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = loginUserSchema.parse(req.body);
+    
+    // Find user by username
+    const user = await storage.getUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+    
+    // Check password
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+    
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ 
+        message: 'Please verify your email address before logging in',
+        requiresVerification: true 
+      });
+    }
+    
+    // Set user session
+    (req.session as any).userId = user.id;
+    (req.session as any).user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified
+    };
+    
+    // Return user data (excluding password)
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ 
+      message: 'Login successful',
+      user: userWithoutPassword 
+    });
+    
+  } catch (error: any) {
+    console.error('Login error:', error);
+    if (error.issues) {
+      return res.status(400).json({ 
+        message: 'Invalid input',
+        errors: error.issues.map((issue: any) => issue.message)
+      });
+    }
+    res.status(500).json({ message: 'Login failed' });
+  }
+});
+
+// User logout endpoint
+router.post('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+      return res.status(500).json({ message: 'Logout failed' });
+    }
+    res.clearCookie('connect.sid');
+    res.json({ message: 'Logout successful' });
+  });
+});
+
+// Get current user endpoint
+router.get('/user', async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    // Return user data (excluding password)
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+    
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ message: 'Failed to get user data' });
+  }
+});
+
+// Email verification endpoint
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = verifyEmailSchema.parse(req.query);
+    
+    const user = await storage.verifyEmailWithToken(token);
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Invalid or expired verification token' 
+      });
+    }
+    
+    res.json({ 
+      message: 'Email verified successfully! You can now log in.',
+      verified: true
+    });
+    
+  } catch (error: any) {
+    console.error('Email verification error:', error);
+    if (error.issues) {
+      return res.status(400).json({ 
+        message: 'Invalid token',
+        errors: error.issues.map((issue: any) => issue.message)
+      });
+    }
+    res.status(500).json({ message: 'Email verification failed' });
+  }
+});
+
+// Forgot password endpoint
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    
+    // Check if user exists
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.json({ 
+        message: 'If an account with that email exists, you will receive a password reset link.'
+      });
+    }
+    
+    // Generate password reset token
+    const resetToken = generatePasswordResetToken();
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    
+    await storage.setPasswordResetToken(email, resetToken, resetExpiry);
+    
+    // Send password reset email
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const emailSent = await sendPasswordResetEmail(email, resetToken, baseUrl);
+    
+    if (!emailSent) {
+      console.error('Failed to send password reset email');
+    }
+    
+    res.json({ 
+      message: 'If an account with that email exists, you will receive a password reset link.'
+    });
+    
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    if (error.issues) {
+      return res.status(400).json({ 
+        message: 'Invalid email',
+        errors: error.issues.map((issue: any) => issue.message)
+      });
+    }
+    res.status(500).json({ message: 'Password reset request failed' });
+  }
+});
+
+// Reset password endpoint
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    
+    // Hash new password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
+    // Reset password with token
+    const user = await storage.resetPasswordWithToken(token, hashedPassword);
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Invalid or expired reset token'
+      });
+    }
+    
+    res.json({ 
+      message: 'Password reset successfully! You can now log in with your new password.',
+      success: true
+    });
+    
+  } catch (error: any) {
+    console.error('Password reset error:', error);
+    if (error.issues) {
+      return res.status(400).json({ 
+        message: 'Invalid input',
+        errors: error.issues.map((issue: any) => issue.message)
+      });
+    }
+    res.status(500).json({ message: 'Password reset failed' });
+  }
+});
+
+// Resend verification email endpoint
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+    
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: 'Email is already verified' });
+    }
+    
+    // Generate new verification token
+    const verificationToken = generateVerificationToken();
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    await storage.setEmailVerificationToken(user.id, verificationToken, verificationExpiry);
+    
+    // Send verification email
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const emailSent = await sendVerificationEmail(
+      user.email,
+      user.username,
+      verificationToken,
+      baseUrl
+    );
+    
+    if (!emailSent) {
+      console.error('Failed to resend verification email');
+      return res.status(500).json({ message: 'Failed to send verification email' });
+    }
+    
+    res.json({ 
+      message: 'Verification email sent! Please check your inbox.'
+    });
+    
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ message: 'Failed to resend verification email' });
+  }
+});
+
+export default router;

@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated, getSession } from "./replitAuth";
+import { getSession } from "./replitAuth";
+import authRoutes from "./authRoutes";
 import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter, socketConnectionLimiter, socketEventLimiter } from "./middleware/rateLimiter";
 import { csrfProtection } from "./middleware/csrfProtection";
 import { z } from "zod";
@@ -54,26 +55,27 @@ const upload = multer({
   }
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware setup
-  await setupAuth(app);
+// Custom authentication middleware
+function isAuthenticated(req: any, res: any, next: any) {
+  const userId = req.session?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  req.userId = userId; // Store user ID for route handlers
+  next();
+}
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Session middleware setup
+  app.use(getSession());
+
+  // Custom auth routes
+  app.use('/api/auth', authRoutes);
 
   // Check subscription status
   app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const user = await storage.getUser(userId);
       
       const now = new Date();
@@ -95,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Usage tracking routes
   app.get('/api/usage/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const user = await storage.getUser(userId);
       const canRoll = await storage.canUseDiceRoll(userId);
       
@@ -146,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     createRateLimitMiddleware(mutationRateLimiter, "dice roll"), 
     async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const canRoll = await storage.canUseDiceRoll(userId);
       
       if (!canRoll) {
@@ -195,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Referral routes
   app.get('/api/referrals/dashboard', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const stats = await storage.getReferralStats(userId);
       
       res.json({
@@ -217,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     createRateLimitMiddleware(referralRateLimiter, "generate referral code"), 
     async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const user = await storage.getUser(userId);
       
       if (user?.referralCode) {
@@ -249,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     createRateLimitMiddleware(referralRateLimiter, "referral apply"), 
     async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       
       // Validate request body with Zod
       const applyReferralSchema = z.object({
@@ -460,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No audio file provided" });
         }
 
-        const userId = req.user.claims.sub;
+        const userId = req.userId;
         const roomId = req.body.roomId || 'public';
 
         // Validate magic bytes to ensure file is actually an audio file
@@ -528,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const messageWithUser = {
           ...chatMessage,
           user: {
-            id: req.user.claims.sub,
+            id: req.userId,
             firstName: req.user.claims.first_name || 'Unknown',
             lastName: req.user.claims.last_name || '',
             profileImageUrl: req.user.claims.profile_image_url
@@ -559,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     createRateLimitMiddleware(mutationRateLimiter, "chat message"),
     async (req: any, res) => {
       try {
-        const userId = req.user.claims.sub;
+        const userId = req.userId;
         
         // Validate request body
         const messageSchema = z.object({
@@ -587,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const messageWithUser = {
           ...chatMessage,
           user: {
-            id: req.user.claims.sub,
+            id: req.userId,
             firstName: req.user.claims.first_name || 'Unknown',
             lastName: req.user.claims.last_name || '',
             profileImageUrl: req.user.claims.profile_image_url
