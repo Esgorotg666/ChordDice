@@ -7,6 +7,7 @@ import AdvancedScaleGuide from "@/components/advanced-scale-guide";
 import RiffModal from "@/components/riff-modal";
 import FretboardModal from "@/components/fretboard-modal";
 import SubscriptionModal from "@/components/subscription-modal";
+import AuthGate from "@/components/auth-gate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +57,23 @@ export default function Home() {
     setCurrentChord(chordToShow);
     setShowFretboardModal(true);
   };
+
+  // Show authentication gate for non-authenticated users
+  if (!isAuthenticated && !isLoading) {
+    return <AuthGate isOpen={true} />;
+  }
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
