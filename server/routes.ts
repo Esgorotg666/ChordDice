@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, getSession } from "./replitAuth";
-import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter } from "./middleware/rateLimiter";
+import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter, socketConnectionLimiter } from "./middleware/rateLimiter";
 import { z } from "zod";
 import Stripe from "stripe";
 import multer from "multer";
@@ -605,6 +605,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   io.use(async (socket, next) => {
     try {
       const req = socket.request as any;
+      
+      // Rate limit Socket.IO connections to prevent DoS attacks
+      const clientIP = req.connection.remoteAddress || req.socket.remoteAddress;
+      if (!socketConnectionLimiter.isAllowed(clientIP)) {
+        return next(new Error('Too many connection attempts. Please try again later.'));
+      }
       
       // Check if user is authenticated via session (same as REST API)
       if (!req.session || !req.session.passport || !req.session.passport.user) {

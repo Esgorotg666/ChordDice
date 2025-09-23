@@ -70,6 +70,7 @@ class RateLimiter {
 // Create rate limiters for different endpoint types
 export const mutationRateLimiter = new RateLimiter(60000, 20); // 20 requests per minute
 export const referralRateLimiter = new RateLimiter(300000, 5); // 5 requests per 5 minutes
+export const socketConnectionLimiter = new RateLimiter(60000, 10); // 10 connections per minute per IP
 
 // Middleware factory
 export function createRateLimitMiddleware(rateLimiter: RateLimiter, action: string) {
