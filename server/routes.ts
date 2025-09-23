@@ -52,6 +52,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Usage tracking routes
+  app.get('/api/usage/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const canRoll = await storage.canUseDiceRoll(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Calculate day-aware values (NULL dates need reset)
+      const needsDiceReset = !user.rollsResetDate || (() => {
+        const rollResetDate = new Date(user.rollsResetDate);
+        rollResetDate.setHours(0, 0, 0, 0);
+        return today.getTime() !== rollResetDate.getTime();
+      })();
+      
+      const needsAdReset = !user.adsWatchDate || (() => {
+        const adsWatchDate = new Date(user.adsWatchDate);
+        adsWatchDate.setHours(0, 0, 0, 0);
+        return today.getTime() !== adsWatchDate.getTime();
+      })();
+      
+      const baseLimit = user.diceRollsLimit || 5;
+      const effectiveUsedRolls = needsDiceReset ? 0 : (user.diceRollsUsed || 0);
+      const extraTokens = user.extraRollTokens || 0;
+      const totalAvailable = baseLimit + extraTokens;
+      const effectiveAdsWatched = needsAdReset ? 0 : (user.adsWatchedCount || 0);
+      
+      res.json({
+        diceRollsUsed: effectiveUsedRolls,
+        diceRollsLimit: baseLimit,
+        extraRollTokens: extraTokens,
+        totalAvailableRolls: totalAvailable,
+        remainingRolls: Math.max(0, totalAvailable - effectiveUsedRolls),
+        adsWatchedCount: effectiveAdsWatched,
+        canUseDiceRoll: canRoll
+      });
+    } catch (error) {
+      console.error("Error checking usage status:", error);
+      res.status(500).json({ message: "Failed to check usage status" });
+    }
+  });
+
+  app.post('/api/usage/increment-dice-roll', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const canRoll = await storage.canUseDiceRoll(userId);
+      
+      if (!canRoll) {
+        return res.status(403).json({ 
+          message: "Dice roll limit reached. Watch an ad or upgrade to premium for unlimited rolls.",
+          limitReached: true
+        });
+      }
+      
+      const updatedUser = await storage.incrementDiceRoll(userId);
+      
+      if (!updatedUser) {
+        return res.status(403).json({ 
+          message: "Dice roll limit reached. Watch an ad or upgrade to premium for unlimited rolls.",
+          limitReached: true
+        });
+      }
+      
+      const baseLimit = updatedUser.diceRollsLimit || 5;
+      const usedRolls = updatedUser.diceRollsUsed || 0;
+      const extraTokens = updatedUser.extraRollTokens || 0;
+      const totalAvailable = baseLimit + extraTokens;
+      
+      res.json({
+        diceRollsUsed: usedRolls,
+        diceRollsLimit: baseLimit,
+        extraRollTokens: extraTokens,
+        remainingRolls: Math.max(0, totalAvailable - usedRolls)
+      });
+    } catch (error) {
+      console.error("Error incrementing dice roll:", error);
+      res.status(500).json({ message: "Failed to increment dice roll" });
+    }
+  });
+
+  app.post('/api/usage/watch-ad-reward', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const updatedUser = await storage.addAdRollReward(userId);
+      
+      res.json({
+        extraRollTokens: updatedUser?.extraRollTokens || 0,
+        adsWatchedCount: updatedUser?.adsWatchedCount || 0,
+        totalAdsWatched: updatedUser?.totalAdsWatched || 0,
+        message: "Thanks for watching! You earned 1 extra riff generation."
+      });
+    } catch (error) {
+      console.error("Error processing ad reward:", error);
+      if (error instanceof Error && error.message.includes('Daily ad limit reached')) {
+        return res.status(403).json({ 
+          message: error.message,
+          dailyLimitReached: true
+        });
+      }
+      res.status(500).json({ message: "Failed to process ad reward" });
+    }
+  });
+
   // Stripe subscription route
   app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
     if (!req.isAuthenticated()) {

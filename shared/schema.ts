@@ -29,12 +29,13 @@ export const users = pgTable("users", {
   subscriptionExpiry: timestamp("subscription_expiry"),
   // Freemium usage tracking
   diceRollsUsed: integer("dice_rolls_used").default(0),
-  diceRollsLimit: integer("dice_rolls_limit").default(5),
+  diceRollsLimit: integer("dice_rolls_limit").default(5), // Base limit, never increased
   rollsResetDate: timestamp("rolls_reset_date").defaultNow(),
-  // Ad system tracking
-  adsWatchedToday: integer("ads_watched_today").default(0),
-  lastAdReset: timestamp("last_ad_reset").defaultNow(),
-  totalAdsWatched: integer("total_ads_watched").default(0),
+  // Token-based ad system (daily reset)
+  extraRollTokens: integer("extra_roll_tokens").default(0), // Consumable tokens from ads
+  adsWatchedCount: integer("ads_watched_count").default(0), // Daily count (resets)
+  adsWatchDate: timestamp("ads_watch_date").defaultNow(), // Date for daily reset tracking
+  totalAdsWatched: integer("total_ads_watched").default(0), // Historical total
   // Referral system
   referralCode: varchar("referral_code", { length: 20 }).unique(),
   referredBy: varchar("referred_by", { length: 20 }),

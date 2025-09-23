@@ -6,6 +6,7 @@ import { Crown } from "lucide-react";
 import { colorGroups, exoticNumbers } from "@/lib/music-data";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useUsageTracking } from "@/hooks/useUsageTracking";
 
 interface DiceInterfaceProps {
   onResult: (result: { type: 'single' | 'riff'; chord?: string; colorName?: string; progression?: string[] }) => void;
@@ -28,6 +29,15 @@ const genres: { value: Genre; label: string; description: string; isPremium?: bo
 export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProps) {
   const { isAuthenticated } = useAuth();
   const { hasActiveSubscription } = useSubscription();
+  const { 
+    usageStatus, 
+    canUseDiceRoll, 
+    remainingRolls, 
+    incrementDiceRoll,
+    isIncrementingRoll,
+    incrementError,
+    hasWatchedMaxAds
+  } = useUsageTracking();
   
   const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random' | 'tapping'>('single');
   const [selectedGenre, setSelectedGenre] = useState<Genre>('any');
@@ -347,8 +357,8 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
     return progression;
   };
 
-  const rollDice = () => {
-    if (isRolling) return;
+  const rollDice = async () => {
+    if (isRolling || isIncrementingRoll) return;
     
     // Check if user clicked premium modes or selected premium genres without subscription
     const isPremiumMode = currentMode === 'random' || currentMode === 'tapping';
@@ -358,38 +368,58 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
       onUpgrade?.();
       return;
     }
+
+    // Check if user has reached their dice roll limit (unless premium)
+    if (!hasActiveSubscription && !canUseDiceRoll) {
+      onUpgrade?.();
+      return;
+    }
     
     setIsRolling(true);
 
-    setTimeout(() => {
-      if (currentMode === 'random') {
-        // Random mode - generate completely random chord progression
-        const progression = generateRandomChords();
-        onResult({ type: 'riff', progression });
-      } else if (currentMode === 'tapping') {
-        // Tapping mode - generate double hand tapping chord combinations
-        const progression = generateTappingChords();
-        onResult({ type: 'riff', progression });
-      } else {
-        // Normal dice-based generation
-        const colorRoll = Math.floor(Math.random() * 8) + 1;
-        const numberRoll = Math.floor(Math.random() * 8) + 1;
-        
-        setColorDiceValue(colorRoll);
-        setNumberDiceValue(numberRoll);
-
-        const { chord, colorName } = generateChord(colorRoll, numberRoll);
-
-        if (currentMode === 'single') {
-          onResult({ type: 'single', chord, colorName });
-        } else {
-          const progression = generateRiff(colorRoll, numberRoll);
-          onResult({ type: 'riff', progression });
-        }
+    try {
+      // Increment usage for non-premium users
+      if (!hasActiveSubscription) {
+        await incrementDiceRoll();
       }
-      
+
+      setTimeout(() => {
+        if (currentMode === 'random') {
+          // Random mode - generate completely random chord progression
+          const progression = generateRandomChords();
+          onResult({ type: 'riff', progression });
+        } else if (currentMode === 'tapping') {
+          // Tapping mode - generate double hand tapping chord combinations
+          const progression = generateTappingChords();
+          onResult({ type: 'riff', progression });
+        } else {
+          // Normal dice-based generation
+          const colorRoll = Math.floor(Math.random() * 8) + 1;
+          const numberRoll = Math.floor(Math.random() * 8) + 1;
+          
+          setColorDiceValue(colorRoll);
+          setNumberDiceValue(numberRoll);
+
+          const { chord, colorName } = generateChord(colorRoll, numberRoll);
+
+          if (currentMode === 'single') {
+            onResult({ type: 'single', chord, colorName });
+          } else {
+            const progression = generateRiff(colorRoll, numberRoll);
+            onResult({ type: 'riff', progression });
+          }
+        }
+        
+        setIsRolling(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Error rolling dice:', error);
       setIsRolling(false);
-    }, 1000);
+      // If usage limit reached, trigger upgrade modal
+      if (error instanceof Error && error.message.includes('limit reached')) {
+        onUpgrade?.();
+      }
+    }
   };
 
   const colorGroup = colorGroups[colorDiceValue - 1];
@@ -517,12 +547,56 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
         </Button>
       </div>
 
+      {/* Usage Counter (for non-premium users) */}
+      {!hasActiveSubscription && usageStatus && (
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg border" data-testid="usage-counter">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary"></div>
+              <span className="text-sm font-medium">Free Generations</span>
+            </div>
+            <div className="text-sm font-semibold" data-testid="text-remaining-rolls">
+              {remainingRolls} of {usageStatus.diceRollsLimit} left
+            </div>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="mt-2 w-full bg-muted rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all duration-300 ${
+                remainingRolls > 2 ? 'bg-green-500' : 
+                remainingRolls > 0 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ 
+                width: `${(remainingRolls / (usageStatus.diceRollsLimit || 5)) * 100}%` 
+              }}
+            />
+          </div>
+          
+          {/* Low usage warning */}
+          {remainingRolls <= 1 && remainingRolls > 0 && (
+            <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+              <i className="fas fa-exclamation-triangle"></i>
+              Almost out! Watch ads for more or upgrade to premium.
+            </div>
+          )}
+          
+          {/* No rolls left */}
+          {remainingRolls === 0 && (
+            <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <i className="fas fa-times-circle"></i>
+              No free rolls left. Watch ads or upgrade to premium for unlimited access.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Roll Button */}
       <Button
         variant="secondary"
         className="w-full bg-accent text-accent-foreground py-4 px-6 font-semibold text-lg hover:bg-accent/90 transition-all transform active:scale-95 shadow-lg min-h-[48px]"
         onClick={rollDice}
-        disabled={isRolling}
+        disabled={isRolling || isIncrementingRoll || (!hasActiveSubscription && !canUseDiceRoll)}
         data-testid="button-roll-dice"
       >
         {isRolling ? (
