@@ -58,10 +58,53 @@ export default function LoginPage() {
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (error: any) {
+      // Parse error message that contains JSON (format: "403: {json}")
+      if (error.message && typeof error.message === 'string') {
+        const match = error.message.match(/^\d+:\s*(\{.*\})$/);
+        if (match) {
+          try {
+            const result = JSON.parse(match[1]);
+            
+            if (result.requiresVerification) {
+              setNeedsVerification(true);
+              setUserEmail(result.email || "");
+            }
+            
+            toast({
+              title: "Login failed",
+              description: result.message || "Invalid username or password",
+              variant: "destructive",
+            });
+            return;
+          } catch (parseError) {
+            // Failed to parse JSON, fall through to network error
+          }
+        }
+      }
+      
+      // Check if this is a response error with verification data (alternative format)
+      if (error?.response) {
+        try {
+          const result = await error.response.json();
+          
+          if (result.requiresVerification) {
+            setNeedsVerification(true);
+            setUserEmail(result.email || "");
+          }
+          
+          toast({
+            title: "Login failed",
+            description: result.message || "Invalid username or password",
+            variant: "destructive",
+          });
+          return;
+        } catch (parseError) {
+          // Failed to parse response, fall through to network error
+        }
+      }
       toast({
-        title: "Network error",
+        title: "Network error", 
         description: "Please check your connection and try again",
         variant: "destructive",
       });

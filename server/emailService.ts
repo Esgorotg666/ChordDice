@@ -34,8 +34,13 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       html: params.html || undefined,
     });
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid email error:', error);
+    console.error('SendGrid Error details:', {
+      statusCode: error.code,
+      body: error.response?.body,
+      headers: error.response?.headers
+    });
     return false;
   }
 }
@@ -58,7 +63,7 @@ export async function sendVerificationEmail(
   
   return sendEmail({
     to: email,
-    from: 'noreply@chordriffgen.com', // You'll need to verify this domain with SendGrid
+    from: 'noreply@example.com', // Using generic domain for testing
     subject: 'Verify your Chord Riff Generator account',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -104,7 +109,7 @@ export async function sendPasswordResetEmail(
   
   return sendEmail({
     to: email,
-    from: 'noreply@chordriffgen.com',
+    from: 'noreply@example.com',
     subject: 'Reset your Chord Riff Generator password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

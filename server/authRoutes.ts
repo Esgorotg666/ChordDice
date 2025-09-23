@@ -108,7 +108,8 @@ router.post('/login', createRateLimitMiddleware(mutationRateLimiter, "login"), a
     if (!user.isEmailVerified) {
       return res.status(403).json({ 
         message: 'Please verify your email address before logging in',
-        requiresVerification: true 
+        requiresVerification: true,
+        email: user.email
       });
     }
     
