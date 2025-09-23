@@ -4,8 +4,11 @@ import {
   type UpsertUser,
   type ChordProgression, 
   type InsertChordProgression,
+  type Referral,
+  type InsertReferral,
   users,
-  chordProgressions
+  chordProgressions,
+  referrals
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -27,6 +30,12 @@ export interface IStorage {
   canUseDiceRoll(userId: string): Promise<boolean>;
   addAdRollReward(userId: string): Promise<User | undefined>;
   resetDailyAds(userId: string): Promise<User | undefined>;
+  
+  // Referral methods
+  generateReferralCode(userId: string): Promise<User | undefined>;
+  getReferralStats(userId: string): Promise<{ user: User; referrals: Referral[]; totalReferred: number; totalRewardsPending: number; }>;
+  applyReferralCode(userId: string, referralCode: string): Promise<{ success: boolean; message: string; }>;
+  processReferralRewards(): Promise<{ processed: number; errors: string[]; }>;
   
   // Chord progression methods
   getChordProgressions(userId?: string): Promise<ChordProgression[]>;
@@ -235,6 +244,205 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return updatedUser;
+  }
+
+  // Referral methods
+  async generateReferralCode(userId: string): Promise<User | undefined> {
+    // Generate a unique referral code (8 characters)
+    const generateCode = (): string => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = '';
+      for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    };
+
+    // Try up to 5 times to generate a unique code
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const newCode = generateCode();
+      
+      try {
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            referralCode: newCode,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId))
+          .returning();
+        
+        return updatedUser;
+      } catch (error: any) {
+        // If unique constraint violation, try again
+        if (error.code === '23505' && attempt < 4) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    
+    throw new Error('Failed to generate unique referral code after 5 attempts');
+  }
+
+  async getReferralStats(userId: string): Promise<{ user: User; referrals: Referral[]; totalReferred: number; totalRewardsPending: number; }> {
+    // Get user info
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get all referrals made by this user
+    const userReferrals = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.referrerUserId, userId));
+
+    // Count pending rewards (referrals that haven't granted rewards yet)
+    const pendingRewards = userReferrals.filter(r => !r.rewardGranted).length;
+
+    return {
+      user,
+      referrals: userReferrals,
+      totalReferred: userReferrals.length,
+      totalRewardsPending: pendingRewards,
+    };
+  }
+
+  async applyReferralCode(userId: string, referralCode: string): Promise<{ success: boolean; message: string; }> {
+    // Find the referrer by code
+    const [referrer] = await db
+      .select()
+      .from(users)
+      .where(eq(users.referralCode, referralCode));
+
+    if (!referrer) {
+      return { success: false, message: 'Invalid referral code' };
+    }
+
+    if (referrer.id === userId) {
+      return { success: false, message: 'You cannot refer yourself' };
+    }
+
+    // Check if user already has a referrer
+    const user = await this.getUser(userId);
+    if (user?.referredBy) {
+      return { success: false, message: 'You have already used a referral code' };
+    }
+
+    try {
+      // Use atomic transaction to ensure consistency
+      await db.transaction(async (tx) => {
+        // Update user with referrer info
+        await tx
+          .update(users)
+          .set({
+            referredBy: referralCode,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+
+        // Create referral record
+        await tx
+          .insert(referrals)
+          .values({
+            referrerUserId: referrer.id,
+            refereeUserId: userId,
+            referralCode: referralCode,
+            signupDate: new Date(),
+          });
+      });
+
+      return { success: true, message: 'Referral code applied successfully!' };
+    } catch (error: any) {
+      console.error('Error applying referral code:', error);
+      
+      // Handle unique constraint violations gracefully
+      if (error.code === '23505') {
+        return { success: false, message: 'You have already used a referral code' };
+      }
+      
+      return { success: false, message: 'Failed to apply referral code' };
+    }
+  }
+
+  async processReferralRewards(): Promise<{ processed: number; errors: string[]; }> {
+    // This processes referral rewards for users who have subscribed
+    // In a real implementation, this would be called by a webhook or scheduled job
+    
+    let processed = 0;
+    const errors: string[] = [];
+
+    try {
+      // Find all referrals where referee has active subscription but reward not granted
+      const pendingRewards = await db
+        .select({
+          referral: referrals,
+          referee: users,
+        })
+        .from(referrals)
+        .innerJoin(users, eq(referrals.refereeUserId, users.id))
+        .where(
+          and(
+            eq(referrals.rewardGranted, false),
+            eq(users.subscriptionStatus, 'active')
+          )
+        );
+
+      for (const { referral } of pendingRewards) {
+        try {
+          // Use atomic transaction to claim reward and apply it
+          await db.transaction(async (tx) => {
+            // First, atomically claim the reward (prevents double processing)
+            const [updatedReferral] = await tx
+              .update(referrals)
+              .set({
+                rewardGranted: true,
+                rewardGrantedDate: new Date(),
+              })
+              .where(
+                and(
+                  eq(referrals.id, referral.id),
+                  eq(referrals.rewardGranted, false) // Only process if not already granted
+                )
+              )
+              .returning();
+
+            // Only proceed if we successfully claimed the reward
+            if (updatedReferral) {
+              // Apply the reward to the referrer within the same transaction
+              // Use DB-side atomic expression to prevent race conditions on subscription expiry
+              await tx
+                .update(users)
+                .set({
+                  subscriptionStatus: 'active',
+                  // Atomic expiry calculation: max(now, current_expiry) + 1 month
+                  subscriptionExpiry: sql`
+                    GREATEST(
+                      COALESCE(${users.subscriptionExpiry}, NOW()), 
+                      NOW()
+                    ) + INTERVAL '1 month'
+                  `,
+                  referralRewardsEarned: sql`COALESCE(${users.referralRewardsEarned}, 0) + 1`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(users.id, referral.referrerUserId));
+            } else {
+              // If we couldn't claim the reward, someone else already processed it
+              return;
+            }
+          });
+
+          processed++;
+        } catch (error: any) {
+          errors.push(`Failed to process reward for referral ${referral.id}: ${error.message}`);
+        }
+      }
+    } catch (error: any) {
+      errors.push(`Failed to fetch pending rewards: ${error.message}`);
+    }
+
+    return { processed, errors };
   }
 
   // Chord progression methods

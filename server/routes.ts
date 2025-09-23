@@ -162,6 +162,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Referral routes
+  app.get('/api/referrals/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getReferralStats(userId);
+      
+      res.json({
+        referralCode: stats.user.referralCode,
+        referrals: stats.referrals,
+        totalReferred: stats.totalReferred,
+        totalRewardsPending: stats.totalRewardsPending,
+        referralRewardsEarned: stats.user.referralRewardsEarned || 0
+      });
+    } catch (error) {
+      console.error("Error fetching referral dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch referral dashboard" });
+    }
+  });
+
+  app.post('/api/referrals/generate-code', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.referralCode) {
+        return res.json({ 
+          referralCode: user.referralCode,
+          message: "You already have a referral code" 
+        });
+      }
+      
+      const updatedUser = await storage.generateReferralCode(userId);
+      
+      if (!updatedUser?.referralCode) {
+        return res.status(500).json({ message: "Failed to generate referral code" });
+      }
+      
+      res.json({
+        referralCode: updatedUser.referralCode,
+        message: "Referral code generated successfully!"
+      });
+    } catch (error) {
+      console.error("Error generating referral code:", error);
+      res.status(500).json({ message: "Failed to generate referral code" });
+    }
+  });
+
+  app.post('/api/referrals/apply', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Validate request body with Zod
+      const applyReferralSchema = z.object({
+        referralCode: z.string().min(1, "Referral code is required").max(20, "Referral code too long")
+      });
+      
+      const validatedData = applyReferralSchema.parse(req.body);
+      
+      const result = await storage.applyReferralCode(userId, validatedData.referralCode.toUpperCase());
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.json({ 
+        message: result.message,
+        success: true
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid referral code", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error applying referral code:", error);
+      res.status(500).json({ message: "Failed to apply referral code" });
+    }
+  });
+
+  // NOTE: Reward processing should be triggered by Stripe webhooks or protected cron jobs
+  // This endpoint is removed for security - referral rewards will be processed automatically
+
   // Stripe subscription route
   app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
     if (!req.isAuthenticated()) {
