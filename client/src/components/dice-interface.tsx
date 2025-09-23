@@ -437,7 +437,9 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
         <label className="text-sm font-medium text-muted-foreground mb-2 block">Musical Genre</label>
         <Select value={selectedGenre} onValueChange={(value: Genre) => setSelectedGenre(value)}>
           <SelectTrigger className="w-full" data-testid="select-genre">
-            <SelectValue placeholder="Select a genre" />
+            <SelectValue placeholder="Select a genre">
+              {selectedGenre && genres.find(g => g.value === selectedGenre)?.label}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {genres.map((genre) => (
