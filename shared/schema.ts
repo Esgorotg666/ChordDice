@@ -73,6 +73,21 @@ export const referrals = pgTable("referrals", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Chat messages table
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull().default("public"),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  content: text("content"), // nullable for audio-only messages
+  audioUrl: varchar("audio_url"), // nullable, relative path to audio file
+  audioDurationSec: integer("audio_duration_sec"), // nullable, for validation
+  mimeType: varchar("mime_type"), // nullable, for audio messages
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_chat_messages_room_created").on(table.roomId, table.createdAt),
+  index("IDX_chat_messages_user").on(table.userId),
+]);
+
 // Schema for Replit Auth user upsert
 export const upsertUserSchema = createInsertSchema(users).pick({
   id: true,
@@ -105,6 +120,15 @@ export const insertReferralSchema = createInsertSchema(referrals).pick({
   trialCompleted: true,
 });
 
+export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
+  roomId: true,
+  userId: true,
+  content: true,
+  audioUrl: true,
+  audioDurationSec: true,
+  mimeType: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -112,3 +136,5 @@ export type InsertChordProgression = z.infer<typeof insertChordProgressionSchema
 export type ChordProgression = typeof chordProgressions.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
 export type Referral = typeof referrals.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
