@@ -1,6 +1,6 @@
 # Overview
 
-This is a **Chord Riff Generator** web application designed to help musicians practice and create musical chord progressions. The app features a 12x11 grid representing 12 musical keys and 11 chord types, with a color-coding system to distinguish major and minor contexts. Users can generate single chords or 4-chord progressions using virtual dice rolls, and the app includes a pentatonic scale guide for improvisation practice.
+This is a **Freemium Chord Riff Generator** web application that helps musicians practice and create musical chord progressions. The app features a 12x11 grid representing 12 musical keys and 11 chord types, with a color-coding system to distinguish major and minor contexts. Users can generate single chords or 4-chord progressions using virtual dice rolls. The app includes a comprehensive freemium business model with usage limits, ad-supported extra tokens, subscription upgrades, and a referral program for user acquisition.
 
 # User Preferences
 
@@ -29,11 +29,27 @@ Preferred communication style: Simple, everyday language.
 - **Connection**: Neon Database serverless PostgreSQL integration
 
 ## Key Features
+
+### Core Musical Features
 - **Dice Rolling System**: Two 8-sided dice for generating random chord progressions
 - **Musical Theory Integration**: Color-coded key groups and numbered exotic chord types
 - **Chord Chart Visualization**: Interactive 12x11 grid showing all key/chord combinations
 - **Pentatonic Scale Guide**: Visual aid for improvisation practice
 - **Progressive Enhancement**: Works as single chord generator or full riff creator
+
+### Freemium Business Model
+- **Authentication Gate**: Required sign-up before any app usage using Replit Auth
+- **Usage Tracking**: 5 free riff generations per user with atomic counter system
+- **Ad-Supported Model**: Watch short ads to earn additional roll tokens (daily limit system)
+- **Premium Subscription**: $4.99/month for unlimited generations and premium features
+- **Stripe Integration**: Secure payment processing for subscription upgrades
+
+### Referral Program
+- **Code Generation**: Unique referral codes for each user with collision-resistant generation
+- **Reward System**: 1-month free Premium subscription when referred users upgrade
+- **Comprehensive Dashboard**: Stats tracking, recent referrals, sharing tools
+- **Signup Integration**: Referral code input during authentication with URL parameter support
+- **Atomic Processing**: Race-condition-free reward claiming with database transactions
 
 ## External Dependencies
 

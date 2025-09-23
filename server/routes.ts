@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertChordProgressionSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { createRateLimitMiddleware, mutationRateLimiter, referralRateLimiter } from "./middleware/rateLimiter";
 import { z } from "zod";
 import Stripe from "stripe";
 
@@ -100,7 +101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/usage/increment-dice-roll', isAuthenticated, async (req: any, res) => {
+  app.post('/api/usage/increment-dice-roll', 
+    isAuthenticated, 
+    createRateLimitMiddleware(mutationRateLimiter, "dice roll"), 
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const canRoll = await storage.canUseDiceRoll(userId);
@@ -138,28 +142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TEMPORARILY DISABLED: Ad endpoint has security vulnerability
+  // TODO: Implement proper ad verification with third-party SDK attestation before re-enabling
   app.post('/api/usage/watch-ad-reward', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      const updatedUser = await storage.addAdRollReward(userId);
-      
-      res.json({
-        extraRollTokens: updatedUser?.extraRollTokens || 0,
-        adsWatchedCount: updatedUser?.adsWatchedCount || 0,
-        totalAdsWatched: updatedUser?.totalAdsWatched || 0,
-        message: "Thanks for watching! You earned 1 extra riff generation."
-      });
-    } catch (error) {
-      console.error("Error processing ad reward:", error);
-      if (error instanceof Error && error.message.includes('Daily ad limit reached')) {
-        return res.status(403).json({ 
-          message: error.message,
-          dailyLimitReached: true
-        });
-      }
-      res.status(500).json({ message: "Failed to process ad reward" });
-    }
+    res.status(503).json({ 
+      message: "Ad system temporarily disabled for security improvements. Please upgrade to Premium for unlimited generations.",
+      success: false,
+      temporarilyDisabled: true
+    });
   });
 
   // Referral routes
@@ -181,7 +171,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/referrals/generate-code', isAuthenticated, async (req: any, res) => {
+  app.post('/api/referrals/generate-code', 
+    isAuthenticated, 
+    createRateLimitMiddleware(referralRateLimiter, "generate referral code"), 
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -209,7 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/referrals/apply', isAuthenticated, async (req: any, res) => {
+  app.post('/api/referrals/apply', 
+    isAuthenticated, 
+    createRateLimitMiddleware(referralRateLimiter, "referral apply"), 
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
