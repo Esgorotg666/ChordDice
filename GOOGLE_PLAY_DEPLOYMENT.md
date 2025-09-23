@@ -8,6 +8,10 @@ Your Chord Riff Generator is now ready for Google Play Store! Here's the simple 
    - Sign up at: https://play.google.com/console/
    - Complete identity verification and payment
 
+2. **Android Keystore** (for app signing) - **REQUIRED**
+   - You need to create a keystore file for signing your app
+   - Follow the setup instructions in the "🔐 Keystore Setup" section below
+
 ## 🔄 Automatic Build Process (GitHub Actions)
 
 Every time you push code to GitHub, your app will automatically:
@@ -55,12 +59,45 @@ Every time you push code to GitHub, your app will automatically:
 - Submit for review (usually takes 1-3 days)
 - Once approved, your app goes live!
 
+## 🔐 Keystore Setup (CRITICAL - Do This First!)
+
+Before your app can build for Google Play, you MUST create an Android keystore:
+
+### Step 1: Create Keystore
+Run this command on your computer (requires Java):
+```bash
+keytool -genkey -v -keystore chordriff-release.keystore -alias chordriff -keyalg RSA -keysize 2048 -validity 10000
+```
+
+When prompted, enter:
+- **Store password**: Create a strong password (save this!)
+- **Key password**: Same as store password (or different - save this!)
+- **Name details**: Your name/company info
+
+### Step 2: Add to GitHub Secrets
+1. Go to your GitHub repository
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Add these secrets:
+   - `KEYSTORE_BASE64`: Your keystore file encoded as base64
+   - `KEYSTORE_PASSWORD`: Your keystore password
+   - `KEY_ALIAS`: `chordriff` (or whatever alias you used)
+   - `KEY_PASSWORD`: Your key password
+
+### Step 3: Encode Keystore as Base64
+Run this command (replace with your actual keystore path):
+```bash
+base64 -i chordriff-release.keystore | tr -d '\n'
+```
+Copy the output and paste it as `KEYSTORE_BASE64` secret.
+
+**⚠️ IMPORTANT**: Keep your keystore file safe! If you lose it, you can never update your app on Google Play.
+
 ## 🔄 Future Updates
 
 To update your app:
 1. Make changes in Replit
 2. Push to GitHub
-3. Download new AAB from GitHub Actions
+3. Download new AAB from GitHub Actions (automatically signed!)
 4. Upload to Google Play Console as new release
 
 ## 🎵 Ready to Launch!
