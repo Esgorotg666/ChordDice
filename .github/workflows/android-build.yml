@@ -1,0 +1,77 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build React app
+      run: npm run build
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Sync Capacitor
+      run: npx cap sync android
+      
+    - name: Build Android APK
+      run: |
+        cd android
+        ./gradlew assembleRelease --no-daemon
+        
+    - name: Build Android App Bundle (AAB)
+      run: |
+        cd android
+        ./gradlew bundleRelease --no-daemon
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: chord-riff-generator-apk
+        path: android/app/build/outputs/apk/release/app-release.apk
+        
+    - name: Upload AAB
+      uses: actions/upload-artifact@v4
+      with:
+        name: chord-riff-generator-aab
+        path: android/app/build/outputs/bundle/release/app-release.aab
+        
+    - name: Create Release Info
+      run: |
+        echo "## 📱 Chord Riff Generator - Android Release" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Build Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **APK**: Ready for sideloading or testing" >> $GITHUB_STEP_SUMMARY
+        echo "- **AAB**: Ready for Google Play Store upload" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Next Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the AAB file from the artifacts above" >> $GITHUB_STEP_SUMMARY
+        echo "2. Go to [Google Play Console](https://play.google.com/console/)" >> $GITHUB_STEP_SUMMARY
+        echo "3. Create a new app and upload the AAB file" >> $GITHUB_STEP_SUMMARY
+        echo "4. Fill out store listing and publish!" >> $GITHUB_STEP_SUMMARY
