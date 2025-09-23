@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, jsonb, timestamp, index, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, jsonb, timestamp, index, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -27,6 +27,18 @@ export const users = pgTable("users", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionStatus: varchar("subscription_status").default("free"), // free, active, canceled, past_due
   subscriptionExpiry: timestamp("subscription_expiry"),
+  // Freemium usage tracking
+  diceRollsUsed: integer("dice_rolls_used").default(0),
+  diceRollsLimit: integer("dice_rolls_limit").default(5),
+  rollsResetDate: timestamp("rolls_reset_date").defaultNow(),
+  // Ad system tracking
+  adsWatchedToday: integer("ads_watched_today").default(0),
+  lastAdReset: timestamp("last_ad_reset").defaultNow(),
+  totalAdsWatched: integer("total_ads_watched").default(0),
+  // Referral system
+  referralCode: varchar("referral_code", { length: 20 }).unique(),
+  referredBy: varchar("referred_by", { length: 20 }),
+  referralRewardsEarned: integer("referral_rewards_earned").default(0),
   // Legacy fields (keeping for backward compatibility)
   username: text("username").unique(),
   password: text("password"),
@@ -43,6 +55,20 @@ export const chordProgressions = pgTable("chord_progressions", {
   colorRoll: text("color_roll"),
   numberRoll: text("number_roll"),
   isFavorite: text("is_favorite").default("false"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Referral tracking table
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerUserId: varchar("referrer_user_id").references(() => users.id),
+  refereeUserId: varchar("referee_user_id").references(() => users.id),
+  referralCode: varchar("referral_code", { length: 20 }).notNull(),
+  signupDate: timestamp("signup_date").defaultNow(),
+  subscriptionDate: timestamp("subscription_date"),
+  trialCompleted: boolean("trial_completed").default(false),
+  rewardGranted: boolean("reward_granted").default(false),
+  rewardGrantedDate: timestamp("reward_granted_date"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -70,8 +96,18 @@ export const insertChordProgressionSchema = createInsertSchema(chordProgressions
   isFavorite: true,
 });
 
+export const insertReferralSchema = createInsertSchema(referrals).pick({
+  referrerUserId: true,
+  refereeUserId: true,
+  referralCode: true,
+  subscriptionDate: true,
+  trialCompleted: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChordProgression = z.infer<typeof insertChordProgressionSchema>;
 export type ChordProgression = typeof chordProgressions.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
+export type Referral = typeof referrals.$inferSelect;
