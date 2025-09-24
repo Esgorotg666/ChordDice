@@ -200,10 +200,12 @@ router.get('/verify-email', async (req, res) => {
       });
     }
     
-    res.json({ 
-      message: 'Email verified successfully! You can now log in.',
-      verified: true
-    });
+    // Redirect to login page with success message
+    const baseUrl = req.get('host')?.includes('localhost') && process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : `${req.protocol}://${req.get('host')}`;
+    
+    res.redirect(`${baseUrl}/login?verified=true`);
     
   } catch (error: any) {
     console.error('Email verification error:', error);

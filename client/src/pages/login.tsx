@@ -19,6 +19,10 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  
+  // Check for verification success parameter
+  const searchParams = new URLSearchParams(window.location.search);
+  const isVerified = searchParams.get('verified') === 'true';
 
   const form = useForm<LoginUser>({
     resolver: zodResolver(loginUserSchema),
@@ -156,6 +160,15 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isVerified && (
+            <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
+              <div className="h-4 w-4 text-green-600">✓</div>
+              <AlertDescription>
+                <strong>Email verified successfully!</strong> You can now log in with your credentials.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {needsVerification && (
             <Alert className="mb-4">
               <AlertCircle className="h-4 w-4" />
