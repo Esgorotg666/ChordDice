@@ -27,6 +27,7 @@ export interface IStorage {
   verifyEmailWithToken(token: string): Promise<User | undefined>;
   setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined>;
   resetPasswordWithToken(token: string, hashedPassword: string): Promise<User | undefined>;
+  upsertUser(userData: Partial<User>): Promise<User>;
   
   // Subscription methods
   updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<User | undefined>;
@@ -95,6 +96,42 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  async upsertUser(userData: Partial<User>): Promise<User> {
+    const existingUser = await this.getUser(userData.id!);
+    
+    if (existingUser) {
+      // Update existing user
+      const [user] = await db
+        .update(users)
+        .set({
+          ...userData,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userData.id!))
+        .returning();
+      return user;
+    } else {
+      // Create new user with default values for custom auth
+      const [user] = await db
+        .insert(users)
+        .values({
+          id: userData.id!,
+          email: userData.email || '',
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          // Default values for custom auth fields
+          username: userData.email?.split('@')[0] || userData.id!, // Use email prefix as username
+          password: '', // Empty password for OAuth users
+          isEmailVerified: true, // OAuth users are pre-verified
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+      return user;
+    }
   }
 
   async setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined> {
