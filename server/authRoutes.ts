@@ -57,8 +57,13 @@ router.post('/register', createRateLimitMiddleware(mutationRateLimiter, "registr
     
     await storage.setEmailVerificationToken(user.id, verificationToken, verificationExpiry);
     
-    // Send verification email
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Send verification email - Use Replit public domain for external access
+    const host = req.get('host');
+    const isLocalhost = host?.includes('localhost') || host?.includes('127.0.0.1');
+    const baseUrl = isLocalhost && process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : `${req.protocol}://${host}`;
+      
     const emailSent = await sendVerificationEmail(
       user.email,
       user.username,
@@ -314,8 +319,20 @@ router.post('/resend-verification', createRateLimitMiddleware(mutationRateLimite
     
     await storage.setEmailVerificationToken(user.id, verificationToken, verificationExpiry);
     
-    // Send verification email
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Send verification email - Use Replit public domain for external access
+    const host = req.get('host');
+    const isLocalhost = host?.includes('localhost') || host?.includes('127.0.0.1');
+    const baseUrl = isLocalhost && process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : `${req.protocol}://${host}`;
+    
+    console.log('=== RESEND EMAIL DEBUG ===');
+    console.log('Base URL:', baseUrl);
+    console.log('Host header:', req.get('host'));
+    console.log('Protocol:', req.protocol);
+    console.log('REPLIT_DEV_DOMAIN:', process.env.REPLIT_DEV_DOMAIN);
+    console.log('Full verification URL would be:', `${baseUrl}/api/auth/verify-email?token=${verificationToken}`);
+    
     const emailSent = await sendVerificationEmail(
       user.email,
       user.username,
