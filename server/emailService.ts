@@ -1,14 +1,29 @@
-// Email service using MailerSend
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
+// Email service using Gmail SMTP
+import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
-if (!process.env.MAILERSEND_API_KEY) {
-  console.warn("MAILERSEND_API_KEY not found - email services will not work");
-}
+// Gmail SMTP configuration
+const createGmailTransporter = () => {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.warn("Gmail credentials not found - email services will not work");
+    console.warn("Please set GMAIL_USER and GMAIL_APP_PASSWORD environment variables");
+    return null;
+  }
 
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY || '',
-});
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
 
 interface EmailData {
   to: string;
@@ -20,50 +35,40 @@ interface EmailData {
 
 export async function sendEmail(params: EmailData): Promise<boolean> {
   try {
-    if (!process.env.MAILERSEND_API_KEY) {
-      console.error('MailerSend API key not configured');
-      return false;
-    }
-
-    const sentFrom = new Sender(params.from, "Chord Riff Generator");
-    const recipients = [new Recipient(params.to)];
-
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(params.subject);
-
-    if (params.html) {
-      emailParams.setHtml(params.html);
-    }
-    if (params.text) {
-      emailParams.setText(params.text);
-    }
-
-    await mailerSend.email.send(emailParams);
-    console.log('MailerSend email sent successfully to:', params.to);
-    return true;
-  } catch (error: any) {
-    console.error('MailerSend email error:', error);
+    const transporter = createGmailTransporter();
     
-    // Check if this is a trial account limitation
-    if (error.status === 422 && error.body?.message?.includes("Trial accounts can only send emails")) {
-      console.log('=== DEVELOPMENT MODE: Email delivery blocked by MailerSend trial limitations ===');
-      console.log('Email that would have been sent:');
+    if (!transporter) {
+      console.error('Gmail SMTP transporter not configured');
+      console.log('=== DEVELOPMENT MODE: Email would be sent ===');
       console.log('To:', params.to);
       console.log('From:', params.from);
       console.log('Subject:', params.subject);
-      console.log('=== In production, configure a verified sender domain ===');
-      
-      // Return true in development since we've "sent" it to console
-      return true;
+      console.log('=== Configure Gmail SMTP to enable email delivery ===');
+      return true; // Return true in development mode
     }
+
+    const mailOptions = {
+      from: `"Chord Riff Generator" <${process.env.GMAIL_USER}>`,
+      to: params.to,
+      subject: params.subject,
+      text: params.text,
+      html: params.html
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Gmail SMTP email sent successfully to:', params.to);
+    return true;
+  } catch (error: any) {
+    console.error('Gmail SMTP email error:', error);
     
-    console.error('MailerSend Error details:', {
-      statusCode: error.status,
-      body: error.body,
-      headers: error.headers
-    });
+    // Log email details for debugging
+    console.log('=== EMAIL SEND FAILED - Details for debugging ===');
+    console.log('To:', params.to);
+    console.log('From:', params.from);
+    console.log('Subject:', params.subject);
+    console.log('Error:', error.message);
+    console.log('=== Check Gmail credentials and app password ===');
+    
     return false;
   }
 }
@@ -86,7 +91,7 @@ export async function sendVerificationEmail(
   
   return sendEmail({
     to: email,
-    from: 'noreply@example.com', // Using generic domain for testing
+    from: process.env.GMAIL_USER || 'noreply@chordrift.com',
     subject: 'Verify your Chord Riff Generator account',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -132,7 +137,7 @@ export async function sendPasswordResetEmail(
   
   return sendEmail({
     to: email,
-    from: 'noreply@example.com',
+    from: process.env.GMAIL_USER || 'noreply@chordrift.com',
     subject: 'Reset your Chord Riff Generator password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
