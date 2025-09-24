@@ -42,8 +42,13 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (response.ok) {
-        // Invalidate queries to refresh user data
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        // Set user data directly from login response instead of immediately refetching
+        queryClient.setQueryData(["/api/auth/user"], result.user);
+        
+        // Small delay to ensure session is saved before any other requests
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }, 100);
         
         toast({
           title: "Welcome back!",
