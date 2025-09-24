@@ -504,7 +504,7 @@ export class DatabaseStorage implements IStorage {
                   referralRewardsEarned: sql`COALESCE(${users.referralRewardsEarned}, 0) + 1`,
                   updatedAt: new Date(),
                 })
-                .where(eq(users.id, referral.referrerUserId));
+                .where(eq(users.id, referral.referrerUserId!));
             } else {
               // If we couldn't claim the reward, someone else already processed it
               return;

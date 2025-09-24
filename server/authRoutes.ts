@@ -342,7 +342,7 @@ router.post('/resend-verification', createRateLimitMiddleware(mutationRateLimite
 // Get current user endpoint  
 router.get('/user', async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = (req.session as any)?.userId;
     
     if (!userId) {
       return res.status(401).json({ message: 'Not authenticated' });
