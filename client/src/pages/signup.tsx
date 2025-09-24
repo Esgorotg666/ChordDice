@@ -33,27 +33,36 @@ export default function SignupPage() {
       setIsSubmitting(true);
       
       const response = await apiRequest("POST", "/api/auth/register", data);
-
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Account created successfully!",
-          description: "Please check your email to verify your account before logging in.",
-        });
-        setLocation("/login");
-      } else {
-        const error = await response.json();
-        toast({
-          title: "Signup failed",
-          description: error.message || "An error occurred during signup",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
+      const result = await response.json();
+      
       toast({
-        title: "Network error",
-        description: "Please check your connection and try again",
+        title: "Account created successfully!",
+        description: "Please check your email to verify your account before logging in.",
+      });
+      setLocation("/login");
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      
+      // Parse error message from the thrown error
+      let errorMessage = "An error occurred during signup";
+      
+      if (error.message) {
+        // Extract JSON from error message format "400: {json}"
+        const match = error.message.match(/^\d+:\s*(.+)$/);
+        if (match) {
+          try {
+            const errorData = JSON.parse(match[1]);
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            // If JSON parsing fails, use the raw message
+            errorMessage = match[1] || errorMessage;
+          }
+        }
+      }
+      
+      toast({
+        title: "Signup failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
