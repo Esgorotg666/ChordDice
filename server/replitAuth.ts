@@ -42,7 +42,7 @@ export function getSession() {
       maxAge: sessionTtl,
       sameSite: 'lax', // CSRF protection
     },
-    name: 'sessionId', // Hide default session name
+    name: 'connect.sid', // Use default session name for compatibility
   });
 }
 

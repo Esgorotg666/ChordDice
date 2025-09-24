@@ -66,7 +66,7 @@ function isAuthenticated(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session middleware setup
+  // Session middleware setup - Note: Session is also set up in setupAuth for OIDC
   app.use(getSession());
 
   // Custom auth routes
