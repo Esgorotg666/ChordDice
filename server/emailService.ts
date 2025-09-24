@@ -12,15 +12,9 @@ const createGmailTransporter = () => {
 
   return nodemailer.createTransport({
     service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use TLS
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false
     }
   });
 };
@@ -66,8 +60,17 @@ export async function sendEmail(params: EmailData): Promise<boolean> {
     console.log('To:', params.to);
     console.log('From:', params.from);
     console.log('Subject:', params.subject);
-    console.log('Error:', error.message);
-    console.log('=== Check Gmail credentials and app password ===');
+    console.log('GMAIL_USER configured:', !!process.env.GMAIL_USER);
+    console.log('GMAIL_APP_PASSWORD configured:', !!process.env.GMAIL_APP_PASSWORD);
+    if (error.response) {
+      console.log('SMTP Response:', error.response);
+    }
+    if (error.responseCode) {
+      console.log('Response Code:', error.responseCode);
+    }
+    console.log('Error Code:', error.code);
+    console.log('Full Error:', error.message);
+    console.log('=== If auth fails, regenerate Gmail app password ===');
     
     return false;
   }
