@@ -90,7 +90,7 @@ export async function sendVerificationEmail(
   token: string,
   baseUrl: string
 ): Promise<boolean> {
-  const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+  const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
   
   return sendEmail({
     to: email,
@@ -136,7 +136,7 @@ export async function sendPasswordResetEmail(
   token: string,
   baseUrl: string
 ): Promise<boolean> {
-  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+  const resetUrl = `${baseUrl}/api/auth/reset-password?token=${token}`;
   
   return sendEmail({
     to: email,
