@@ -136,7 +136,7 @@ export async function sendPasswordResetEmail(
   token: string,
   baseUrl: string
 ): Promise<boolean> {
-  const resetUrl = `${baseUrl}/api/auth/reset-password?token=${token}`;
+  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
   
   return sendEmail({
     to: email,
