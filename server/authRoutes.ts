@@ -122,23 +122,31 @@ router.post('/login', createRateLimitMiddleware(mutationRateLimiter, "login"), a
     req.session.regenerate((err) => {
       if (err) {
         console.error('Session regeneration error:', err);
+        // Continue with login even if session regeneration fails
       }
-    });
-    
-    // Set user session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      isEmailVerified: user.isEmailVerified
-    };
-    
-    // Return user data (excluding password)
-    const { password: _, ...userWithoutPassword } = user;
-    res.json({ 
-      message: 'Login successful',
-      user: userWithoutPassword 
+      
+      // Set user session after regeneration completes
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isEmailVerified: user.isEmailVerified
+      };
+      
+      // Save the session explicitly
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+        }
+        
+        // Return user data (excluding password)
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ 
+          message: 'Login successful',
+          user: userWithoutPassword 
+        });
+      });
     });
     
   } catch (error: any) {
