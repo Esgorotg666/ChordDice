@@ -20,7 +20,9 @@ export const users = pgTable("users", {
   // Custom auth fields
   username: varchar("username").unique().notNull(),
   email: varchar("email").unique().notNull(),
-  password: text("password").notNull(),
+  password: text("password"), // Nullable to support OAuth users
+  authProvider: varchar("auth_provider").notNull().default("local"), // 'local' or 'replit'
+  authProviderId: varchar("auth_provider_id"), // External ID for OAuth accounts
   isEmailVerified: boolean("is_email_verified").default(false),
   emailVerificationToken: varchar("email_verification_token"),
   emailVerificationExpiry: timestamp("email_verification_expiry"),
@@ -93,11 +95,14 @@ export const chatMessages = pgTable("chat_messages", {
   index("IDX_chat_messages_user").on(table.userId),
 ]);
 
-// Schema for user registration
+// Schema for user registration - enforces password for local accounts
 export const registerUserSchema = createInsertSchema(users).pick({
   username: true,
   email: true,
   password: true,
+}).refine(data => data.password && data.password.trim().length > 0, {
+  message: "Password is required for local accounts",
+  path: ["password"]
 });
 
 // Schema for user login
