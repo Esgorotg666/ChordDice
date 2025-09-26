@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Music, Crown, Users, Zap, Gift } from "lucide-react";
+import { Music, Crown, Users, Zap, Gift, Play } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AuthGateProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [showReferralInput, setShowReferralInput] = useState(false);
+  const { activateDemoMode } = useAuth();
 
   // Check URL for referral code
   useEffect(() => {
@@ -203,6 +205,28 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
               >
                 Sign in here
               </Button>
+            </div>
+            
+            {/* Demo Mode Button for Reviewers */}
+            <div className="pt-3 border-t border-muted/50">
+              <div className="text-center space-y-2">
+                <p className="text-xs text-muted-foreground">For reviewers & testing:</p>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm"
+                  onClick={() => {
+                    activateDemoMode();
+                    onClose?.();
+                  }}
+                  data-testid="button-demo-mode"
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  Continue as Guest (Demo Mode)
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Full access without account creation
+                </p>
+              </div>
             </div>
           </div>
 
