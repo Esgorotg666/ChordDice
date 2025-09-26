@@ -18,7 +18,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   // Custom auth fields
-  username: varchar("username").unique().notNull(),
+  username: varchar("username").unique(), // Nullable to support legacy OAuth users
   email: varchar("email").unique().notNull(),
   password: text("password"), // Nullable to support OAuth users
   authProvider: varchar("auth_provider").notNull().default("local"), // 'local' or 'replit'
