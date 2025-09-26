@@ -40,7 +40,8 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
     watchAd,
     isWatchingAd,
     adError,
-    extraTokens
+    extraTokens,
+    isTestUser
   } = useUsageTracking();
   
   const [currentMode, setCurrentMode] = useState<'single' | 'riff' | 'random' | 'tapping'>('single');
@@ -556,84 +557,98 @@ export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProp
       {/* Usage Counter (for non-premium users) */}
       {!hasActiveSubscription && usageStatus && (
         <div className="mb-4 p-3 bg-muted/50 rounded-lg border" data-testid="usage-counter">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary"></div>
-              <span className="text-sm font-medium">Free Generations</span>
+          {isTestUser ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                Test User - Unlimited Access
+              </span>
             </div>
-            <div className="text-sm font-semibold" data-testid="text-remaining-rolls">
-              {remainingRolls} of {usageStatus.diceRollsLimit} left
-            </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="mt-2 w-full bg-muted rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                remainingRolls > 2 ? 'bg-green-500' : 
-                remainingRolls > 0 ? 'bg-yellow-500' : 'bg-red-500'
-              }`}
-              style={{ 
-                width: `${(remainingRolls / (usageStatus.diceRollsLimit || 5)) * 100}%` 
-              }}
-            />
-          </div>
-          
-          {/* Extra tokens display */}
-          {extraTokens > 0 && (
-            <div className="mt-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-              <i className="fas fa-plus-circle"></i>
-              +{extraTokens} bonus roll{extraTokens > 1 ? 's' : ''} from ads
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary"></div>
+                <span className="text-sm font-medium">Free Generations</span>
+              </div>
+              <div className="text-sm font-semibold" data-testid="text-remaining-rolls">
+                {remainingRolls} of {usageStatus.diceRollsLimit} left
+              </div>
             </div>
           )}
           
-          {/* Ad watch section */}
-          {remainingRolls <= 2 && !hasWatchedMaxAds && (
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Get more rolls</span>
-                <span className="text-xs text-muted-foreground">{usageStatus?.adsWatchedCount || 0}/5 ads today</span>
+          {/* Progress bar and usage info - hidden for test users */}
+          {!isTestUser && (
+            <>
+              {/* Progress bar */}
+              <div className="mt-2 w-full bg-muted rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    remainingRolls > 2 ? 'bg-green-500' : 
+                    remainingRolls > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ 
+                    width: `${(remainingRolls / (usageStatus.diceRollsLimit || 5)) * 100}%` 
+                  }}
+                />
               </div>
-              <Button
-                onClick={async () => {
-                  try {
-                    await watchAd();
-                  } catch (error) {
-                    console.error('Error watching ad:', error);
-                  }
-                }}
-                disabled={isWatchingAd || hasWatchedMaxAds}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                data-testid="button-watch-ad"
-              >
-                {isWatchingAd ? (
-                  <>
-                    <Play className="h-3 w-3 mr-1 animate-pulse" />
-                    Watching Ad...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-3 w-3 mr-1" />
-                    Watch Ad (+1 Roll)
-                  </>
-                )}
-              </Button>
-              {adError && (
-                <div className="text-xs text-red-600 dark:text-red-400">
-                  Error: {adError}
+              
+              {/* Extra tokens display */}
+              {extraTokens > 0 && (
+                <div className="mt-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <i className="fas fa-plus-circle"></i>
+                  +{extraTokens} bonus roll{extraTokens > 1 ? 's' : ''} from ads
                 </div>
               )}
-            </div>
-          )}
-          
-          {/* No rolls left message */}
-          {remainingRolls === 0 && hasWatchedMaxAds && (
-            <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-              <i className="fas fa-times-circle"></i>
-              No rolls left. Daily limit reached. Upgrade to premium for unlimited access.
-            </div>
+              
+              {/* Ad watch section */}
+              {remainingRolls <= 2 && !hasWatchedMaxAds && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Get more rolls</span>
+                    <span className="text-xs text-muted-foreground">{usageStatus?.adsWatchedCount || 0}/5 ads today</span>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await watchAd();
+                      } catch (error) {
+                        console.error('Error watching ad:', error);
+                      }
+                    }}
+                    disabled={isWatchingAd || hasWatchedMaxAds}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    data-testid="button-watch-ad"
+                  >
+                    {isWatchingAd ? (
+                      <>
+                        <Play className="h-3 w-3 mr-1 animate-pulse" />
+                        Watching Ad...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3 mr-1" />
+                        Watch Ad (+1 Roll)
+                      </>
+                    )}
+                  </Button>
+                  {adError && (
+                    <div className="text-xs text-red-600 dark:text-red-400">
+                      Error: {adError}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* No rolls left message */}
+              {remainingRolls === 0 && hasWatchedMaxAds && (
+                <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <i className="fas fa-times-circle"></i>
+                  No rolls left. Daily limit reached. Upgrade to premium for unlimited access.
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
