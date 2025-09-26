@@ -36,13 +36,14 @@ const DEMO_USER: User = {
 };
 
 export function useAuth() {
+  // Check if demo mode is enabled first
+  const isDemoMode = localStorage.getItem('chorddice_demo_mode') === 'true';
+  
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    enabled: !isDemoMode, // Skip API calls in demo mode to avoid 401s
   });
-
-  // Check if demo mode is enabled
-  const isDemoMode = localStorage.getItem('chorddice_demo_mode') === 'true';
 
   const activateDemoMode = () => {
     localStorage.setItem('chorddice_demo_mode', 'true');
