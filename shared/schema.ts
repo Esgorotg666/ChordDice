@@ -129,6 +129,16 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+// Account deletion schema
+export const deleteAccountSchema = z.object({
+  confirm: z.literal("DELETE", { 
+    errorMap: () => ({ message: 'You must type "DELETE" to confirm account deletion' })
+  }),
+  password: z.string().optional(), // Optional for OAuth users
+  reason: z.string().max(500, 'Reason must be 500 characters or less').optional(),
+  erase: z.boolean().default(true), // Complete data erasure (GDPR compliance)
+});
+
 export const insertChordProgressionSchema = createInsertSchema(chordProgressions).pick({
   userId: true,
   type: true,
@@ -160,6 +170,7 @@ export type LoginUser = z.infer<typeof loginUserSchema>;
 export type VerifyEmail = z.infer<typeof verifyEmailSchema>;
 export type ForgotPassword = z.infer<typeof forgotPasswordSchema>;
 export type ResetPassword = z.infer<typeof resetPasswordSchema>;
+export type DeleteAccountRequest = z.infer<typeof deleteAccountSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChordProgression = z.infer<typeof insertChordProgressionSchema>;
 export type ChordProgression = typeof chordProgressions.$inferSelect;
