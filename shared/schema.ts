@@ -50,6 +50,8 @@ export const users = pgTable("users", {
   referralCode: varchar("referral_code", { length: 20 }).unique(),
   referredBy: varchar("referred_by", { length: 20 }),
   referralRewardsEarned: integer("referral_rewards_earned").default(0),
+  // Testing access
+  isTestUser: boolean("is_test_user").default(false), // Complete access bypass for testers
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

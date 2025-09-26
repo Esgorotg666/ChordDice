@@ -229,6 +229,9 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return false;
     
+    // Test users have unlimited access - bypass all restrictions
+    if (user.isTestUser) return true;
+    
     // Premium users have unlimited rolls
     const now = new Date();
     const isActive = user.subscriptionStatus === 'active' && 
@@ -256,6 +259,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementDiceRoll(userId: string): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+    
+    // Test users get unlimited access - just update timestamp without restrictions
+    if (user.isTestUser) {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      return updatedUser;
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
