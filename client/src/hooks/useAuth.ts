@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
@@ -36,43 +35,48 @@ const DEMO_USER: User = {
   updatedAt: new Date(),
 };
 
+// Demo mode toggle functions (shared between modes)
+const activateDemoMode = () => {
+  try {
+    localStorage.setItem('chorddice_demo_mode', 'true');
+    window.location.reload();
+  } catch (error) {
+    console.warn('Could not activate demo mode:', error);
+  }
+};
+
+const exitDemoMode = () => {
+  try {
+    localStorage.removeItem('chorddice_demo_mode');
+    window.location.reload();
+  } catch (error) {
+    console.warn('Could not exit demo mode:', error);
+  }
+};
+
+// Custom hook with unified implementation
 export function useAuth() {
-  // Initialize demo mode state synchronously to avoid initial 401s
-  const [isDemoMode, setIsDemoMode] = useState(() => {
+  // Check demo mode safely  
+  const isDemoMode = (() => {
     try {
-      return typeof window !== 'undefined' && localStorage.getItem('chorddice_demo_mode') === 'true';
+      const demoValue = typeof window !== 'undefined' ? localStorage.getItem('chorddice_demo_mode') : null;
+      return demoValue === 'true';
     } catch {
       return false;
     }
-  });
-  
+  })();
+
+  // Always call useQuery to satisfy Rules of Hooks
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    enabled: !isDemoMode, // Skip API calls in demo mode to avoid 401s
+    enabled: !isDemoMode, // Only enabled when not in demo mode
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 1000 * 60 * 5,
   });
 
-  const activateDemoMode = () => {
-    try {
-      localStorage.setItem('chorddice_demo_mode', 'true');
-      setIsDemoMode(true);
-      // Force page reload to update authentication state
-      window.location.reload();
-    } catch (error) {
-      console.warn('Could not activate demo mode:', error);
-    }
-  };
-
-  const exitDemoMode = () => {
-    try {
-      localStorage.removeItem('chorddice_demo_mode');
-      setIsDemoMode(false);
-      window.location.reload();
-    } catch (error) {
-      console.warn('Could not exit demo mode:', error);
-    }
-  };
-
+  // Return unified object based on demo mode
   return {
     user: isDemoMode ? DEMO_USER : user,
     isLoading: isDemoMode ? false : isLoading,
