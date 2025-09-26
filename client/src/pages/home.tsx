@@ -27,7 +27,7 @@ interface GeneratedResult {
 }
 
 export default function Home() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isDemoMode, exitDemoMode } = useAuth();
   const { hasActiveSubscription } = useSubscription();
   const { toast } = useToast();
   
@@ -60,16 +60,16 @@ export default function Home() {
     },
   });
 
-  // Process pending referral code after authentication
+  // Process pending referral code after authentication (skip in demo mode)
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    if (isAuthenticated && !isLoading && !isDemoMode) {
       const pendingReferralCode = sessionStorage.getItem('pendingReferralCode');
       if (pendingReferralCode && !applyReferralMutation.isPending) {
         // Apply the referral code (don't clear until success)
         applyReferralMutation.mutate(pendingReferralCode);
       }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isDemoMode]);
 
   const handleDiceResult = (result: GeneratedResult) => {
     setResult(result);
@@ -136,8 +136,19 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-2">
+              {/* Demo Mode Badge */}
+              {isDemoMode && (
+                <Badge 
+                  variant="outline"
+                  className="bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-800"
+                  data-testid="badge-demo-mode"
+                >
+                  Demo Mode
+                </Badge>
+              )}
+              
               {/* Subscription Status Badge */}
-              {isAuthenticated && (
+              {isAuthenticated && !isDemoMode && (
                 <Badge 
                   variant={hasActiveSubscription ? "default" : "secondary"}
                   className={hasActiveSubscription ? "bg-primary text-primary-foreground" : ""}
@@ -168,9 +179,9 @@ export default function Home() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={isDemoMode ? exitDemoMode : () => window.location.href = '/api/logout'}
                     className="p-2 h-auto"
-                    data-testid="button-logout"
+                    data-testid={isDemoMode ? "button-exit-demo" : "button-logout"}
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>

@@ -207,27 +207,29 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
               </Button>
             </div>
             
-            {/* Demo Mode Button for Reviewers */}
-            <div className="pt-3 border-t border-muted/50">
-              <div className="text-center space-y-2">
-                <p className="text-xs text-muted-foreground">For reviewers & testing:</p>
-                <Button 
-                  variant="outline" 
-                  className="w-full text-sm"
-                  onClick={() => {
-                    activateDemoMode();
-                    onClose?.();
-                  }}
-                  data-testid="button-demo-mode"
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Continue as Guest (Demo Mode)
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Full access without account creation
-                </p>
+            {/* Demo Mode Button for Reviewers - Show by default unless explicitly disabled */}
+            {import.meta.env.VITE_DEMO_ENABLED !== 'false' && (
+              <div className="pt-3 border-t border-muted/50">
+                <div className="text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">For reviewers & testing:</p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-sm"
+                    onClick={() => {
+                      activateDemoMode();
+                      onClose?.();
+                    }}
+                    data-testid="button-demo-mode"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Continue as Guest (Demo Mode)
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Full access without account creation
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <p className="text-xs text-center text-muted-foreground">

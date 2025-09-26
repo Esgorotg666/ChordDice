@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
@@ -36,8 +37,14 @@ const DEMO_USER: User = {
 };
 
 export function useAuth() {
-  // Check if demo mode is enabled first
-  const isDemoMode = localStorage.getItem('chorddice_demo_mode') === 'true';
+  // Initialize demo mode state synchronously to avoid initial 401s
+  const [isDemoMode, setIsDemoMode] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('chorddice_demo_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
   
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
@@ -46,14 +53,24 @@ export function useAuth() {
   });
 
   const activateDemoMode = () => {
-    localStorage.setItem('chorddice_demo_mode', 'true');
-    // Force page reload to update authentication state
-    window.location.reload();
+    try {
+      localStorage.setItem('chorddice_demo_mode', 'true');
+      setIsDemoMode(true);
+      // Force page reload to update authentication state
+      window.location.reload();
+    } catch (error) {
+      console.warn('Could not activate demo mode:', error);
+    }
   };
 
   const exitDemoMode = () => {
-    localStorage.removeItem('chorddice_demo_mode');
-    window.location.reload();
+    try {
+      localStorage.removeItem('chorddice_demo_mode');
+      setIsDemoMode(false);
+      window.location.reload();
+    } catch (error) {
+      console.warn('Could not exit demo mode:', error);
+    }
   };
 
   return {
