@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { registerUserSchema, type RegisterUser } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +20,7 @@ export default function SignupPage() {
 
   const form = useForm<RegisterUser>({
     resolver: zodResolver(registerUserSchema.extend({
-      password: registerUserSchema.shape.password.min(6, "Password must be at least 6 characters")
+      password: z.string().min(6, "Password must be at least 6 characters")
     })),
     defaultValues: {
       username: "",

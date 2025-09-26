@@ -7,11 +7,13 @@ import {
   verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  deleteAccountSchema,
   type RegisterUser,
   type LoginUser,
   type VerifyEmail,
   type ForgotPassword,
-  type ResetPassword
+  type ResetPassword,
+  type DeleteAccountRequest
 } from '@shared/schema';
 import { 
   sendVerificationEmail, 
@@ -20,6 +22,7 @@ import {
   generatePasswordResetToken 
 } from './emailService';
 import { createRateLimitMiddleware, mutationRateLimiter } from './middleware/rateLimiter';
+import { csrfProtection } from './middleware/csrfProtection';
 
 const router = Router();
 
@@ -29,9 +32,11 @@ router.post('/register', createRateLimitMiddleware(mutationRateLimiter, "registr
     const userData = registerUserSchema.parse(req.body);
     
     // Check if username already exists
-    const existingUserByUsername = await storage.getUserByUsername(userData.username);
-    if (existingUserByUsername) {
-      return res.status(400).json({ message: 'Username already exists' });
+    if (userData.username) {
+      const existingUserByUsername = await storage.getUserByUsername(userData.username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
     }
     
     // Check if email already exists
@@ -42,13 +47,14 @@ router.post('/register', createRateLimitMiddleware(mutationRateLimiter, "registr
     
     // Hash password
     const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(userData.password!, saltRounds);
     
     // Create user
     const user = await storage.createUser({
       username: userData.username,
       email: userData.email,
       password: hashedPassword,
+      authProvider: 'local',
     });
     
     // Generate email verification token
@@ -66,7 +72,7 @@ router.post('/register', createRateLimitMiddleware(mutationRateLimiter, "registr
       
     const emailSent = await sendVerificationEmail(
       user.email,
-      user.username,
+      user.username || user.email.split('@')[0],
       verificationToken,
       baseUrl
     );
@@ -104,7 +110,7 @@ router.post('/login', createRateLimitMiddleware(mutationRateLimiter, "login"), a
     }
     
     // Check password
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(password, user.password!);
     if (!passwordMatch) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
@@ -345,7 +351,7 @@ router.post('/resend-verification', createRateLimitMiddleware(mutationRateLimite
     
     const emailSent = await sendVerificationEmail(
       user.email,
-      user.username,
+      user.username || user.email.split('@')[0],
       verificationToken,
       baseUrl
     );
@@ -388,6 +394,88 @@ router.get('/user', async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ message: 'Failed to get user information' });
+  }
+});
+
+// Account deletion endpoint
+router.delete('/account', createRateLimitMiddleware(mutationRateLimiter, "account_deletion"), csrfProtection, async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const deleteRequest = deleteAccountSchema.parse(req.body);
+    
+    // Get user to verify deletion requirements
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // For accounts with passwords, require password verification
+    if (user.password && user.password.trim().length > 0) {
+      if (!deleteRequest.password) {
+        return res.status(400).json({ message: 'Password required for account deletion' });
+      }
+      
+      const passwordValid = await bcrypt.compare(deleteRequest.password, user.password!);
+      if (!passwordValid) {
+        return res.status(400).json({ message: 'Invalid password' });
+      }
+    } else {
+      // For OAuth users, require recent session (within 15 minutes for security)
+      const sessionAge = Date.now() - new Date(user.updatedAt || user.createdAt || Date.now()).getTime();
+      const maxSessionAge = 15 * 60 * 1000; // 15 minutes
+      
+      if (sessionAge > maxSessionAge) {
+        return res.status(400).json({ 
+          message: 'Please sign in again to delete your account (security requirement)' 
+        });
+      }
+    }
+    
+    // Cancel Stripe subscription if user has one (mandatory for account deletion)
+    if (user.stripeSubscriptionId) {
+      try {
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        console.log(`Canceled Stripe subscription: ${user.stripeSubscriptionId}`);
+      } catch (stripeError) {
+        console.error('Failed to cancel Stripe subscription:', stripeError);
+        return res.status(500).json({ 
+          message: 'Failed to cancel subscription. Please contact support to complete account deletion.',
+          error: 'STRIPE_CANCELLATION_FAILED'
+        });
+      }
+    }
+    
+    // Perform cascading deletion
+    const deletionSuccess = await storage.deleteUserCascade(userId);
+    
+    if (!deletionSuccess) {
+      return res.status(500).json({ message: 'Failed to delete account. Please try again.' });
+    }
+    
+    // Destroy session after successful deletion
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Failed to destroy session after account deletion:', err);
+      }
+    });
+    
+    // Clear session cookie
+    res.clearCookie('connect.sid');
+    
+    res.status(202).json({ 
+      message: 'Account successfully deleted. All your data has been permanently removed.',
+      redirectUrl: '/'
+    });
+    
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ message: 'Failed to delete account. Please try again.' });
   }
 });
 

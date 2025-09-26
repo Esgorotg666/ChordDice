@@ -57,6 +57,9 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatHistory(roomId: string, limit?: number, before?: Date): Promise<Array<ChatMessage & { user: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl'> }>>;
   deleteChatMessage(messageId: string, userId: string): Promise<boolean>;
+  
+  // Account deletion method
+  deleteUserCascade(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -125,6 +128,7 @@ export class DatabaseStorage implements IStorage {
           // Default values for custom auth fields
           username: userData.email?.split('@')[0] || userData.id!, // Use email prefix as username
           password: '', // Empty password for OAuth users
+          authProvider: 'replit', // OAuth users from Replit
           isEmailVerified: true, // OAuth users are pre-verified
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -667,6 +671,82 @@ export class DatabaseStorage implements IStorage {
       .delete(chatMessages)
       .where(and(eq(chatMessages.id, messageId), eq(chatMessages.userId, userId)));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteUserCascade(userId: string): Promise<boolean> {
+    try {
+      let audioFilesToDelete: string[] = [];
+
+      await db.transaction(async (tx) => {
+        // First, collect any audio files that need to be deleted
+        const userChatMessages = await tx
+          .select({ audioUrl: chatMessages.audioUrl })
+          .from(chatMessages)
+          .where(and(eq(chatMessages.userId, userId), sql`${chatMessages.audioUrl} IS NOT NULL`));
+        
+        audioFilesToDelete = userChatMessages
+          .map(msg => msg.audioUrl)
+          .filter(url => url) as string[];
+
+        // Delete related data in proper order to avoid foreign key violations
+        
+        // Delete chat messages
+        await tx
+          .delete(chatMessages)
+          .where(eq(chatMessages.userId, userId));
+
+        // Delete chord progressions
+        await tx
+          .delete(chordProgressions)
+          .where(eq(chordProgressions.userId, userId));
+
+        // Delete referrals where user is either referrer or referee
+        await tx
+          .delete(referrals)
+          .where(
+            sql`${referrals.referrerUserId} = ${userId} OR ${referrals.refereeUserId} = ${userId}`
+          );
+
+        // Delete session data using SQL for JSON search
+        await tx.execute(
+          sql`DELETE FROM sessions WHERE sess->'user'->>'id' = ${userId}`
+        );
+
+        // Finally, delete the user
+        const userResult = await tx
+          .delete(users)
+          .where(eq(users.id, userId));
+
+        if ((userResult.rowCount ?? 0) === 0) {
+          throw new Error('User not found or already deleted');
+        }
+      });
+
+      // After successful transaction, clean up audio files
+      if (audioFilesToDelete.length > 0) {
+        const { unlink } = await import('fs/promises');
+        const path = await import('path');
+        
+        for (const audioUrl of audioFilesToDelete) {
+          try {
+            // Extract filename from URL and construct full path
+            const filename = audioUrl.split('/').pop();
+            if (filename) {
+              const filePath = path.join(process.cwd(), 'uploads', 'chat', filename);
+              await unlink(filePath);
+            }
+          } catch (fileError) {
+            // Log but don't fail the entire operation for file cleanup errors
+            console.warn(`Failed to delete audio file ${audioUrl}:`, fileError);
+          }
+        }
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error('Failed to delete user cascade:', error);
+      return false;
+    }
   }
 }
 

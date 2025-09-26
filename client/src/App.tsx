@@ -12,6 +12,8 @@ import SignupPage from "@/pages/signup";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import VerifyEmailPage from "@/pages/verify-email";
+import DeleteAccountPage from "@/pages/deleteAccount";
+import AccountDeletionInfoPage from "@/pages/accountDeletionInfo";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />
+      <Route path="/delete-account" component={DeleteAccountPage} />
+      <Route path="/account-deletion" component={AccountDeletionInfoPage} />
       <Route path="/referrals" component={ReferralsPage} />
       <Route path="/chat" component={ChatPage} />
       <Route component={NotFound} />

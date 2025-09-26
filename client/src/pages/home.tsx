@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Settings, Crown, User, LogOut, Users } from "lucide-react";
+import { Settings, Crown, User, LogOut, Users, Trash2, MoreVertical } from "lucide-react";
 import DiceInterface from "@/components/dice-interface";
 import ChordChart from "@/components/chord-chart";
 import PentatonicGuide from "@/components/pentatonic-guide";
@@ -11,6 +11,13 @@ import SubscriptionModal from "@/components/subscription-modal";
 import AuthGate from "@/components/auth-gate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -176,15 +183,43 @@ export default function Home() {
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={isDemoMode ? exitDemoMode : () => window.location.href = '/api/logout'}
-                    className="p-2 h-auto"
-                    data-testid={isDemoMode ? "button-exit-demo" : "button-logout"}
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  
+                  {/* User Menu Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="p-2 h-auto"
+                        data-testid="button-user-menu"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {!isDemoMode && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => window.location.href = '/delete-account'}
+                            className="text-red-600 focus:text-red-600 cursor-pointer"
+                            data-testid="menu-delete-account"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Account
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={isDemoMode ? exitDemoMode : () => window.location.href = '/api/logout'}
+                        className="cursor-pointer"
+                        data-testid={isDemoMode ? "menu-exit-demo" : "menu-logout"}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        {isDemoMode ? 'Exit Demo' : 'Logout'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <Button 
