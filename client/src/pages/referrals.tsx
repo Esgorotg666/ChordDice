@@ -23,25 +23,57 @@ interface ReferralStats {
 }
 
 export default function ReferralsPage() {
-  const { user, isAuthenticated } = useAuthContext();
+  const { user, isAuthenticated, isDemoMode } = useAuthContext();
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Demo mode referral data (offline)
+  const demoStats: ReferralStats = {
+    referralCode: "DEMO123",
+    referralsCount: 3,
+    rewardsEarned: 1,
+    recentReferrals: [
+      {
+        id: "1",
+        refereeEmail: "user1@example.com",
+        createdAt: "2024-01-15T10:30:00Z",
+        rewardGranted: true
+      },
+      {
+        id: "2", 
+        refereeEmail: "user2@example.com",
+        createdAt: "2024-01-10T14:20:00Z",
+        rewardGranted: false
+      }
+    ]
+  };
+
   // Fetch referral dashboard data
   const { data: stats, isLoading, error } = useQuery<ReferralStats>({
     queryKey: ['/api/referrals/dashboard'],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isDemoMode,
   });
 
-  // Generate referral code mutation
+  // Use demo data in demo mode, otherwise use fetched data
+  const displayStats = isDemoMode ? demoStats : stats;
+
+  // Generate referral code mutation (disabled in demo mode)
   const generateCodeMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/referrals/generate-code'),
+    mutationFn: () => {
+      if (isDemoMode) {
+        // In demo mode, just show success without API call
+        return Promise.resolve();
+      }
+      return apiRequest('POST', '/api/referrals/generate-code');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/referrals/dashboard'] });
+      if (!isDemoMode) {
+        queryClient.invalidateQueries({ queryKey: ['/api/referrals/dashboard'] });
+      }
       toast({
         title: "Referral code generated!",
-        description: "Your unique referral code is ready to share.",
+        description: isDemoMode ? "Demo: Referral code generation simulated" : "Your unique referral code is ready to share.",
       });
     },
     onError: (error: any) => {
@@ -76,14 +108,14 @@ export default function ReferralsPage() {
     }
   };
 
-  const referralLink = stats?.referralCode 
-    ? `${window.location.origin}?ref=${stats.referralCode}`
+  const referralLink = displayStats?.referralCode 
+    ? `${window.location.origin}?ref=${displayStats.referralCode}`
     : '';
 
   const shareReferral = async () => {
     const shareData = {
       title: 'Chord Riff Generator - Join me!',
-      text: `Create amazing chord progressions with AI! Use my referral code ${stats?.referralCode} to get started.`,
+      text: `Create amazing chord progressions with AI! Use my referral code ${displayStats?.referralCode} to get started.`,
       url: referralLink,
     };
 
@@ -192,12 +224,12 @@ export default function ReferralsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {stats?.referralCode ? (
+            {displayStats?.referralCode ? (
               <>
                 <div className="bg-primary/10 rounded-lg p-4 text-center">
                   <div className="text-sm text-muted-foreground mb-1">Referral Code</div>
                   <div className="text-2xl font-bold text-primary" data-testid="text-referral-code">
-                    {stats.referralCode}
+                    {displayStats.referralCode}
                   </div>
                 </div>
                 
@@ -205,7 +237,7 @@ export default function ReferralsPage() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => copyToClipboard(stats.referralCode, 'code')}
+                    onClick={() => copyToClipboard(displayStats.referralCode, 'code')}
                     data-testid="button-copy-code"
                   >
                     <Copy className="h-4 w-4 mr-2" />
@@ -263,7 +295,7 @@ export default function ReferralsPage() {
             <CardContent className="p-4 text-center">
               <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
               <div className="text-2xl font-bold" data-testid="text-referrals-count">
-                {stats?.referralsCount || 0}
+                {displayStats?.referralsCount || 0}
               </div>
               <div className="text-sm text-muted-foreground">Friends Referred</div>
             </CardContent>
@@ -273,7 +305,7 @@ export default function ReferralsPage() {
             <CardContent className="p-4 text-center">
               <Crown className="h-8 w-8 mx-auto mb-2 text-amber-500" />
               <div className="text-2xl font-bold" data-testid="text-rewards-earned">
-                {stats?.rewardsEarned || 0}
+                {displayStats?.rewardsEarned || 0}
               </div>
               <div className="text-sm text-muted-foreground">Free Months Earned</div>
             </CardContent>
