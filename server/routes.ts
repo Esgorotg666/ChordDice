@@ -127,6 +127,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalAvailable = baseLimit + extraTokens;
       const effectiveAdsWatched = needsAdReset ? 0 : (user.adsWatchedCount || 0);
       
+      // Test users get unlimited access
+      if (user.isTestUser) {
+        return res.json({
+          diceRollsUsed: 0,
+          diceRollsLimit: 999999, // Effectively unlimited
+          extraRollTokens: 999999,
+          totalAvailableRolls: 999999,
+          remainingRolls: 999999,
+          adsWatchedCount: 0,
+          canUseDiceRoll: true,
+          isTestUser: true
+        });
+      }
+      
       res.json({
         diceRollsUsed: effectiveUsedRolls,
         diceRollsLimit: baseLimit,
@@ -134,7 +148,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAvailableRolls: totalAvailable,
         remainingRolls: Math.max(0, totalAvailable - effectiveUsedRolls),
         adsWatchedCount: effectiveAdsWatched,
-        canUseDiceRoll: canRoll
+        canUseDiceRoll: canRoll,
+        isTestUser: false
       });
     } catch (error) {
       console.error("Error checking usage status:", error);

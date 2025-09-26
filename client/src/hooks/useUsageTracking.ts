@@ -10,6 +10,7 @@ interface UsageStatus {
   remainingRolls: number;
   adsWatchedCount: number;
   canUseDiceRoll: boolean;
+  isTestUser?: boolean;
 }
 
 interface DiceRollResult {
@@ -88,6 +89,7 @@ export function useUsageTracking() {
     remainingRolls: isAuthenticated ? (usageStatus?.remainingRolls || 0) : 0,
     extraTokens: usageStatus?.extraRollTokens || 0,
     hasWatchedMaxAds: (usageStatus?.adsWatchedCount || 0) >= 5,
+    isTestUser: usageStatus?.isTestUser || false,
     
     // Actions
     incrementDiceRoll: incrementDiceRollMutation.mutateAsync,
