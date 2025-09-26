@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "./useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useSubscription() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isDemoMode } = useAuthContext();
 
   const { data: subscription, isLoading } = useQuery({
     queryKey: ["/api/subscription/status"],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isDemoMode,
     retry: false,
   });
 

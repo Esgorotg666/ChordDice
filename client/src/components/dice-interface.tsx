@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Crown, Play, Eye } from "lucide-react";
 import { colorGroups, exoticNumbers } from "@/lib/music-data";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useUsageTracking } from "@/hooks/useUsageTracking";
 
@@ -27,7 +27,7 @@ const genres: { value: Genre; label: string; description: string; isPremium?: bo
 ];
 
 export default function DiceInterface({ onResult, onUpgrade }: DiceInterfaceProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuthContext();
   const { hasActiveSubscription } = useSubscription();
   const { 
     usageStatus, 

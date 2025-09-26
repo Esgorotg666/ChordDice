@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Mic, Upload, Volume2, VolumeX } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -37,7 +37,7 @@ interface TypingUser {
 }
 
 export default function ChatPage() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface UsageStatus {
   diceRollsUsed: number;
@@ -28,7 +28,7 @@ interface AdRewardResult {
 
 export function useUsageTracking() {
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading: isAuthLoading, isDemoMode } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, isDemoMode } = useAuthContext();
 
   // Demo mode usage status (unlimited access)
   const demoUsageStatus: UsageStatus = {

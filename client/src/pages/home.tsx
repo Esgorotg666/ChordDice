@@ -12,7 +12,7 @@ import AuthGate from "@/components/auth-gate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { getChordDiagram } from "@/lib/music-data";
 import { useMutation } from "@tanstack/react-query";
@@ -27,7 +27,7 @@ interface GeneratedResult {
 }
 
 export default function Home() {
-  const { user, isAuthenticated, isLoading, isDemoMode, exitDemoMode } = useAuth();
+  const { user, isAuthenticated, isLoading, isDemoMode, exitDemoMode } = useAuthContext();
   const { hasActiveSubscription } = useSubscription();
   const { toast } = useToast();
   

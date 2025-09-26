@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Music, Crown, Users, Zap, Gift, Play } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface AuthGateProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ export default function AuthGate({ isOpen, onClose }: AuthGateProps) {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [showReferralInput, setShowReferralInput] = useState(false);
-  const { activateDemoMode } = useAuth();
+  const { activateDemoMode } = useAuthContext();
 
   // Check URL for referral code
   useEffect(() => {
