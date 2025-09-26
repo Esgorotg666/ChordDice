@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">chorddice</string>
-    <parameter name="title_activity_main">chorddice</string>
+    <string name="title_activity_main">chorddice</string>
     <string name="package_name">com.chordriff.generator</string>
     <string name="custom_url_scheme">com.chordriff.generator</string>
 </resources>
