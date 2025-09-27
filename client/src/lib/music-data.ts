@@ -154,6 +154,226 @@ export const chordDiagrams: Record<string, ChordDiagram> = {
   'G+': { name: 'G Augmented', positions: [3, 2, 1, 0, 0, 3], fingers: [4, 3, 2, 0, 0, 1] }
 };
 
+// Musical Mode Definitions for advanced theory
+export interface ModeDef {
+  id: string;
+  name: string;
+  quality: 'major' | 'minor' | 'diminished';
+  intervals: number[]; // Semitone intervals from root
+  degreeFormula: string[]; // Scale degrees (1, 2, b3, etc.)
+  characteristicDegrees: number[]; // Degrees that define the mode
+  avoidDegrees?: number[]; // Degrees to avoid emphasizing
+  preferredPentatonic: 'major' | 'minor';
+  color: string; // For visualization
+  description: string;
+  parentMajor: number; // Which degree of major scale this mode starts from
+}
+
+// The 7 modes of the major scale
+export const modes: ModeDef[] = [
+  {
+    id: 'ionian',
+    name: 'Ionian',
+    quality: 'major',
+    intervals: [0, 2, 4, 5, 7, 9, 11],
+    degreeFormula: ['1', '2', '3', '4', '5', '6', '7'],
+    characteristicDegrees: [1, 3, 5],
+    preferredPentatonic: 'major',
+    color: 'rgb(59, 130, 246)', // Blue
+    description: 'The major scale - bright and happy',
+    parentMajor: 1
+  },
+  {
+    id: 'dorian',
+    name: 'Dorian',
+    quality: 'minor',
+    intervals: [0, 2, 3, 5, 7, 9, 10],
+    degreeFormula: ['1', '2', '♭3', '4', '5', '6', '♭7'],
+    characteristicDegrees: [6], // Natural 6th makes it distinctive
+    preferredPentatonic: 'minor',
+    color: 'rgb(34, 197, 94)', // Green
+    description: 'Minor with natural 6th - jazzy and sophisticated',
+    parentMajor: 2
+  },
+  {
+    id: 'phrygian',
+    name: 'Phrygian',
+    quality: 'minor',
+    intervals: [0, 1, 3, 5, 7, 8, 10],
+    degreeFormula: ['1', '♭2', '♭3', '4', '5', '♭6', '♭7'],
+    characteristicDegrees: [2], // Flat 2nd creates Spanish/exotic sound
+    preferredPentatonic: 'minor',
+    color: 'rgb(168, 85, 247)', // Purple
+    description: 'Dark and exotic - Spanish/Mediterranean flavor',
+    parentMajor: 3
+  },
+  {
+    id: 'lydian',
+    name: 'Lydian',
+    quality: 'major',
+    intervals: [0, 2, 4, 6, 7, 9, 11],
+    degreeFormula: ['1', '2', '3', '♯4', '5', '6', '7'],
+    characteristicDegrees: [4], // Sharp 4th creates dreamy quality
+    preferredPentatonic: 'major',
+    color: 'rgb(249, 115, 22)', // Orange
+    description: 'Major with sharp 4th - dreamy and floating',
+    parentMajor: 4
+  },
+  {
+    id: 'mixolydian',
+    name: 'Mixolydian',
+    quality: 'major',
+    intervals: [0, 2, 4, 5, 7, 9, 10],
+    degreeFormula: ['1', '2', '3', '4', '5', '6', '♭7'],
+    characteristicDegrees: [7], // Flat 7th gives bluesy/rock feel
+    preferredPentatonic: 'major',
+    color: 'rgb(239, 68, 68)', // Red
+    description: 'Major with flat 7th - bluesy and dominant',
+    parentMajor: 5
+  },
+  {
+    id: 'aeolian',
+    name: 'Aeolian',
+    quality: 'minor',
+    intervals: [0, 2, 3, 5, 7, 8, 10],
+    degreeFormula: ['1', '2', '♭3', '4', '5', '♭6', '♭7'],
+    characteristicDegrees: [1, 3, 5],
+    preferredPentatonic: 'minor',
+    color: 'rgb(107, 114, 128)', // Gray
+    description: 'Natural minor scale - melancholy and emotional',
+    parentMajor: 6
+  },
+  {
+    id: 'locrian',
+    name: 'Locrian',
+    quality: 'diminished',
+    intervals: [0, 1, 3, 5, 6, 8, 10],
+    degreeFormula: ['1', '♭2', '♭3', '4', '♭5', '♭6', '♭7'],
+    characteristicDegrees: [5], // Flat 5th creates unstable, diminished sound
+    avoidDegrees: [1], // Root is often avoided due to instability
+    preferredPentatonic: 'minor',
+    color: 'rgb(75, 85, 99)', // Dark gray
+    description: 'Unstable and dissonant - rarely used as tonal center',
+    parentMajor: 7
+  }
+];
+
+// Core chromatic notes (using sharps to match fretboard mapping)
+export const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+
+// Normalize note names for consistent comparison
+export const normalizeNote = (note: string): string => {
+  return note.replace(/♯/g, '#').replace(/♭/g, 'b').replace(/\s/g, '');
+};
+
+// Transpose a note by semitones
+export const transpose = (rootNote: string, semitones: number): string => {
+  const normalized = normalizeNote(rootNote);
+  let rootIndex = NOTES.findIndex(note => normalizeNote(note) === normalized);
+  
+  if (rootIndex === -1) {
+    // Handle enharmonic equivalents
+    const enharmonics: Record<string, string> = {
+      'Db': 'C♯', 'Eb': 'D♯', 'Gb': 'F♯', 'Ab': 'G♯', 'Bb': 'A♯'
+    };
+    const equivalent = enharmonics[normalized] || enharmonics[normalized.replace('b', '♭')];
+    if (equivalent) {
+      rootIndex = NOTES.findIndex(note => normalizeNote(note) === normalizeNote(equivalent));
+    }
+  }
+  
+  if (rootIndex === -1) return rootNote; // Return original if not found
+  
+  const newIndex = (rootIndex + semitones + 12) % 12;
+  return NOTES[newIndex];
+};
+
+// Build scale notes from root and intervals
+export const buildScaleByIntervals = (root: string, intervals: number[]): string[] => {
+  return intervals.map(interval => transpose(root, interval));
+};
+
+// Convert degree formula to actual notes
+export const degreeToNote = (root: string, degreeFormula: string[]): string[] => {
+  const degreeToSemitones: Record<string, number> = {
+    '1': 0, '♭2': 1, '2': 2, '♭3': 3, '3': 4, '4': 5, '♯4': 6, '♭5': 6, '5': 7,
+    '♯5': 8, '♭6': 8, '6': 9, '♯6': 10, '♭7': 10, '7': 11
+  };
+  
+  return degreeFormula.map(degree => {
+    const semitones = degreeToSemitones[degree];
+    return semitones !== undefined ? transpose(root, semitones) : root;
+  });
+};
+
+// Check if array A is a subset of array B
+export const isSubset = (a: string[], b: string[]): boolean => {
+  const normalizedB = b.map(normalizeNote);
+  return a.every(note => normalizedB.includes(normalizeNote(note)));
+};
+
+// Generate related scales for a given mode
+export const generateRelatedScales = (mode: ModeDef, root: string): Array<{name: string, notes: string[], type: string}> => {
+  const modeNotes = buildScaleByIntervals(root, mode.intervals);
+  const relatedScales: Array<{name: string, notes: string[], type: string}> = [];
+  
+  // Major pentatonic (1 2 3 5 6)
+  if (mode.preferredPentatonic === 'major') {
+    const majorPenta = [root, transpose(root, 2), transpose(root, 4), transpose(root, 7), transpose(root, 9)];
+    if (isSubset(majorPenta, modeNotes)) {
+      relatedScales.push({name: 'Major Pentatonic', notes: majorPenta, type: 'pentatonic'});
+    }
+  }
+  
+  // Minor pentatonic (1 ♭3 4 5 ♭7)
+  if (mode.preferredPentatonic === 'minor') {
+    const minorPenta = [root, transpose(root, 3), transpose(root, 5), transpose(root, 7), transpose(root, 10)];
+    if (isSubset(minorPenta, modeNotes)) {
+      relatedScales.push({name: 'Minor Pentatonic', notes: minorPenta, type: 'pentatonic'});
+    }
+  }
+  
+  // Triad arpeggio
+  let triadNotes: string[];
+  if (mode.quality === 'major') {
+    triadNotes = [root, transpose(root, 4), transpose(root, 7)]; // 1 3 5
+  } else if (mode.quality === 'minor') {
+    triadNotes = [root, transpose(root, 3), transpose(root, 7)]; // 1 ♭3 5
+  } else { // diminished
+    triadNotes = [root, transpose(root, 3), transpose(root, 6)]; // 1 ♭3 ♭5
+  }
+  
+  if (isSubset(triadNotes, modeNotes)) {
+    relatedScales.push({name: `${mode.quality.charAt(0).toUpperCase() + mode.quality.slice(1)} Triad`, notes: triadNotes, type: 'arpeggio'});
+  }
+  
+  // Seventh arpeggio
+  let seventhNotes: string[];
+  if (mode.quality === 'major') {
+    seventhNotes = [...triadNotes, transpose(root, 11)]; // Add major 7th
+  } else if (mode.quality === 'minor') {
+    seventhNotes = [...triadNotes, transpose(root, 10)]; // Add minor 7th
+  } else { // diminished
+    seventhNotes = [...triadNotes, transpose(root, 9)]; // Add diminished 7th (maj6)
+  }
+  
+  if (isSubset(seventhNotes, modeNotes)) {
+    relatedScales.push({name: `${mode.quality.charAt(0).toUpperCase() + mode.quality.slice(1)} 7th`, notes: seventhNotes, type: 'arpeggio'});
+  }
+  
+  // Hexatonic (6-note scale removing avoid degree if present)
+  if (mode.avoidDegrees && mode.avoidDegrees.length > 0) {
+    const hexatonicNotes = modeNotes.filter((_, index) => !mode.avoidDegrees!.includes(index + 1));
+    if (hexatonicNotes.length === 6) {
+      relatedScales.push({name: 'Hexatonic (avoid removed)', notes: hexatonicNotes, type: 'hexatonic'});
+    }
+  }
+  
+  // Return 2-3 random scales
+  const shuffled = relatedScales.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(3, Math.max(2, shuffled.length)));
+};
+
 export const getChordDiagram = (chordName: string): ChordDiagram | null => {
   // Handle empty/null input
   if (!chordName) return null;
