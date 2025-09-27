@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Crown, Lock, Shuffle, Music } from "lucide-react";
+import { Crown, Lock, Shuffle, Music, Guitar } from "lucide-react";
 
 interface ScaleInfo {
   name: string;
@@ -20,6 +20,28 @@ interface OctaveChord {
   notes: string[];
   fretPosition: string;
 }
+
+interface FretPosition {
+  string: number; // 0-5 (E, A, D, G, B, E)
+  fret: number;   // 0-12
+  note: string;
+}
+
+// Standard tuning fretboard note mapping (first 12 frets)
+const fretboardNotes: string[][] = [
+  // String 6 (Low E): E F F# G G# A A# B C C# D D# E
+  ['E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B', 'C', 'C♯', 'D', 'D♯', 'E'],
+  // String 5 (A): A A# B C C# D D# E F F# G G# A
+  ['A', 'A♯', 'B', 'C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A'],
+  // String 4 (D): D D# E F F# G G# A A# B C C# D
+  ['D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B', 'C', 'C♯', 'D'],
+  // String 3 (G): G G# A A# B C C# D D# E F F# G
+  ['G', 'G♯', 'A', 'A♯', 'B', 'C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G'],
+  // String 2 (B): B C C# D D# E F F# G G# A A# B
+  ['B', 'C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'],
+  // String 1 (High E): E F F# G G# A A# B C C# D D# E
+  ['E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B', 'C', 'C♯', 'D', 'D♯', 'E']
+];
 
 const availableScales: Record<string, ScaleInfo> = {
   minor_pentatonic: {
@@ -133,6 +155,143 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
     );
   }
 
+  // Helper function to find all fret positions for a given note
+  const findNotePositions = (note: string): FretPosition[] => {
+    const positions: FretPosition[] = [];
+    const normalizedNote = note.replace('♯', '#').replace('♭', 'b');
+    
+    for (let stringIndex = 0; stringIndex < fretboardNotes.length; stringIndex++) {
+      for (let fretIndex = 0; fretIndex < fretboardNotes[stringIndex].length; fretIndex++) {
+        const fretNote = fretboardNotes[stringIndex][fretIndex].replace('♯', '#').replace('♭', 'b');
+        if (fretNote === normalizedNote || 
+            (normalizedNote === 'D#' && fretNote === 'Eb') ||
+            (normalizedNote === 'Eb' && fretNote === 'D#')) {
+          positions.push({
+            string: stringIndex,
+            fret: fretIndex,
+            note: note
+          });
+        }
+      }
+    }
+    return positions;
+  };
+
+  // Get color class without 'bg-' prefix for use in border/text colors
+  const getColorHex = (bgColorClass: string) => {
+    const colorMap: Record<string, string> = {
+      'bg-red-500': 'rgb(239, 68, 68)',
+      'bg-blue-500': 'rgb(59, 130, 246)', 
+      'bg-purple-500': 'rgb(168, 85, 247)',
+      'bg-green-500': 'rgb(34, 197, 94)',
+      'bg-orange-500': 'rgb(249, 115, 22)',
+      'bg-gray-500': 'rgb(107, 114, 128)'
+    };
+    return colorMap[bgColorClass] || 'rgb(59, 130, 246)';
+  };
+
+  // Fretboard visualization component
+  const FretboardVisualization = ({ scales }: { scales: ScaleInfo[] }) => {
+    const strings = ['E', 'A', 'D', 'G', 'B', 'E'];
+    const frets = Array.from({ length: 13 }, (_, i) => i); // 0-12 frets
+    
+    // Collect all note positions for all scales
+    const scalePositions = scales.flatMap((scale, scaleIndex) => 
+      scale.notes.flatMap(note => 
+        findNotePositions(note).map(pos => ({
+          ...pos,
+          scaleIndex,
+          scaleName: scale.name,
+          color: getColorHex(scale.color)
+        }))
+      )
+    );
+
+    return (
+      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 border-2 border-amber-200 dark:border-amber-800">
+        <div className="flex items-center justify-center mb-3">
+          <Guitar className="mr-2 h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <h4 className="text-lg font-semibold text-amber-800 dark:text-amber-200">
+            Fretboard Visualization
+          </h4>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            {/* String labels */}
+            <div className="flex mb-2">
+              <div className="w-8 text-xs text-center">Fret</div>
+              {frets.map(fret => (
+                <div key={fret} className="w-12 text-xs text-center font-medium text-muted-foreground">
+                  {fret}
+                </div>
+              ))}
+            </div>
+            
+            {/* Fretboard strings */}
+            {strings.map((string, stringIndex) => (
+              <div key={stringIndex} className="flex items-center mb-1">
+                {/* String name */}
+                <div className="w-8 text-xs text-center font-bold text-amber-700 dark:text-amber-300">
+                  {string}
+                </div>
+                
+                {/* Frets for this string */}
+                {frets.map(fret => {
+                  const positionsAtThisFret = scalePositions.filter(
+                    pos => pos.string === stringIndex && pos.fret === fret
+                  );
+                  
+                  return (
+                    <div key={fret} className="w-12 h-8 relative flex items-center justify-center">
+                      {/* String line */}
+                      <div className="absolute w-full h-0.5 bg-gray-400 dark:bg-gray-600"></div>
+                      
+                      {/* Fret wire */}
+                      {fret > 0 && (
+                        <div className="absolute left-0 w-0.5 h-8 bg-gray-600 dark:bg-gray-400"></div>
+                      )}
+                      
+                      {/* Note markers */}
+                      {positionsAtThisFret.map((position, index) => (
+                        <div
+                          key={index}
+                          className="absolute w-6 h-6 rounded-full border-2 flex items-center justify-center text-white text-xs font-bold z-10"
+                          style={{ 
+                            backgroundColor: position.color,
+                            borderColor: position.color,
+                            transform: `translateY(${index * 2 - (positionsAtThisFret.length - 1)}px)`
+                          }}
+                          title={`${position.note} (${position.scaleName})`}
+                          data-testid={`fretboard-note-${stringIndex}-${fret}-${index}`}
+                        >
+                          {position.note.charAt(0)}
+                        </div>
+                      ))}
+                      
+                      {/* Fret position markers (dots) */}
+                      {stringIndex === 2 && [3, 5, 7, 9, 15, 17, 19, 21].includes(fret) && (
+                        <div className="absolute w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full opacity-50"></div>
+                      )}
+                      {stringIndex === 2 && fret === 12 && (
+                        <div className="absolute w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-full opacity-50"></div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Legend */}
+        <div className="mt-4 text-xs text-muted-foreground">
+          <p>💡 Tip: Each colored dot shows where to play notes from the generated scales. Multiple colors = multiple scales overlap!</p>
+        </div>
+      </div>
+    );
+  };
+
   const generateScaleCombination = () => {
     const scales = Object.values(availableScales);
     const numScales = Math.floor(Math.random() * 2) + 2; // 2-3 scales
@@ -209,6 +368,10 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
                   </Card>
                 ))}
               </div>
+              
+              {/* Fretboard Visualization */}
+              <FretboardVisualization scales={scaleCombination} />
+              
               <Card className="p-3 bg-primary/5 border-primary/20">
                 <h4 className="font-semibold text-sm mb-2">💡 Soloing Tip</h4>
                 <p className="text-xs text-muted-foreground">
