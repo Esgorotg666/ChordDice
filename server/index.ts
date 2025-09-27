@@ -57,6 +57,26 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
+    // Production static serving fix: serve from dist/public (actual build output)
+    // instead of server/public to fix SPA routing for published app
+    const path = await import("path");
+    const fs = await import("fs");
+    
+    const distPublicPath = path.resolve(process.cwd(), "dist/public");
+    const serverPublicPath = path.resolve(import.meta.dirname, "public");
+    
+    // Use dist/public if it exists (actual build output), fallback to server/public
+    const staticDir = fs.existsSync(distPublicPath) ? distPublicPath : serverPublicPath;
+    
+    if (fs.existsSync(staticDir)) {
+      app.use(express.static(staticDir));
+      // SPA fallback: serve index.html for all unmatched routes
+      app.use("*", (_req, res) => {
+        res.sendFile(path.join(staticDir, "index.html"));
+      });
+    }
+    
+    // Keep original serveStatic as backup (will be no-op if we handled it above)
     serveStatic(app);
   }
 
