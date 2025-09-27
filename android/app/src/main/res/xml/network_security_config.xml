@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">chorddice.replit.app</domain>
+        <domain includeSubdomains="true">replit.app</domain>
+        <domain includeSubdomains="true">api.stripe.com</domain>
+        <domain includeSubdomains="true">js.stripe.com</domain>
+        <domain includeSubdomains="true">m.stripe.network</domain>
+        <domain includeSubdomains="true">checkout.stripe.com</domain>
+    </domain-config>
+    
+    <!-- Allow HTTPS everywhere, block HTTP -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>
