@@ -198,21 +198,53 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
   };
 
   // Fretboard visualization component
-  const FretboardVisualization = ({ scales }: { scales: ScaleInfo[] }) => {
+  const FretboardVisualization = ({ 
+    scales, 
+    mode, 
+    variant = "scales" 
+  }: { 
+    scales?: ScaleInfo[], 
+    mode?: { mode: ModeDef, root: string, notes: string[] },
+    variant?: "scales" | "mode" 
+  }) => {
     const strings = ['E', 'A', 'D', 'G', 'B', 'E'];
     const frets = Array.from({ length: 13 }, (_, i) => i); // 0-12 frets
     
-    // Collect all note positions for all scales
-    const scalePositions = scales.flatMap((scale, scaleIndex) => 
-      scale.notes.flatMap(note => 
-        findNotePositions(note).map(pos => ({
-          ...pos,
-          scaleIndex,
-          scaleName: scale.name,
-          color: getColorHex(scale.color)
-        }))
-      )
-    );
+    let scalePositions: any[] = [];
+    
+    if (variant === "scales" && scales) {
+      // Collect all note positions for all scales
+      scalePositions = scales.flatMap((scale, scaleIndex) => 
+        scale.notes.flatMap(note => 
+          findNotePositions(note).map(pos => ({
+            ...pos,
+            scaleIndex,
+            scaleName: scale.name,
+            color: getColorHex(scale.color),
+            label: note.charAt(0)
+          }))
+        )
+      );
+    } else if (variant === "mode" && mode) {
+      // Collect mode note positions with degree numbers
+      scalePositions = mode.notes.flatMap((note, noteIndex) => 
+        findNotePositions(note).map(pos => {
+          const degree = noteIndex + 1;
+          const isChordTone = mode.mode.characteristicDegrees.includes(degree) || [1, 3, 5].includes(degree);
+          const isAvoid = mode.mode.avoidDegrees?.includes(degree);
+          
+          return {
+            ...pos,
+            degree,
+            isChordTone,
+            isAvoid,
+            color: mode.mode.color,
+            label: degree.toString(),
+            note
+          };
+        })
+      );
+    }
 
     return (
       <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 border-2 border-amber-200 dark:border-amber-800">
@@ -260,21 +292,34 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
                       )}
                       
                       {/* Note markers */}
-                      {positionsAtThisFret.map((position, index) => (
-                        <div
-                          key={index}
-                          className="absolute w-6 h-6 rounded-full border-2 flex items-center justify-center text-white text-xs font-bold z-10"
-                          style={{ 
-                            backgroundColor: position.color,
-                            borderColor: position.color,
-                            transform: `translateY(${index * 2 - (positionsAtThisFret.length - 1)}px)`
-                          }}
-                          title={`${position.note} (${position.scaleName})`}
-                          data-testid={`fretboard-note-${stringIndex}-${fret}-${index}`}
-                        >
-                          {position.note.charAt(0)}
-                        </div>
-                      ))}
+                      {positionsAtThisFret.map((position, index) => {
+                        const isMode = variant === "mode";
+                        const isChordTone = isMode && position.isChordTone;
+                        const isAvoid = isMode && position.isAvoid;
+                        
+                        return (
+                          <div
+                            key={index}
+                            className={`absolute w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold z-10 ${
+                              isAvoid ? 'opacity-50' : ''
+                            }`}
+                            style={{ 
+                              backgroundColor: isMode && !isChordTone ? 'transparent' : position.color,
+                              borderColor: position.color,
+                              color: isMode && !isChordTone ? position.color : 'white',
+                              borderWidth: isMode && !isChordTone ? '2px' : '2px',
+                              transform: `translateY(${index * 2 - (positionsAtThisFret.length - 1)}px)`
+                            }}
+                            title={isMode ? 
+                              `${position.note} (Degree ${position.degree}${isChordTone ? ' - Chord Tone' : ''}${isAvoid ? ' - Avoid' : ''})` :
+                              `${position.note} (${position.scaleName})`
+                            }
+                            data-testid={`fretboard-note-${stringIndex}-${fret}-${index}`}
+                          >
+                            {position.label}
+                          </div>
+                        );
+                      })}
                       
                       {/* Fret position markers (dots) */}
                       {stringIndex === 2 && [3, 5, 7, 9, 15, 17, 19, 21].includes(fret) && (
@@ -293,7 +338,23 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
         
         {/* Legend */}
         <div className="mt-4 text-xs text-muted-foreground">
-          <p>💡 Tip: Each colored dot shows where to play notes from the generated scales. Multiple colors = multiple scales overlap!</p>
+          {variant === "mode" ? (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2" style={{ backgroundColor: mode?.mode.color, borderColor: mode?.mode.color }}></div>
+                  <span>Chord Tones (1,3,5)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 bg-transparent" style={{ borderColor: mode?.mode.color, color: mode?.mode.color }}></div>
+                  <span>Tensions/Extensions</span>
+                </div>
+              </div>
+              <p>💡 Tip: Numbers show scale degrees. Filled dots = chord tones, outlined = tensions. Focus on chord tones for stability!</p>
+            </div>
+          ) : (
+            <p>💡 Tip: Each colored dot shows where to play notes from the generated scales. Multiple colors = multiple scales overlap!</p>
+          )}
         </div>
       </div>
     );
@@ -576,6 +637,12 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
                   </div>
                 </div>
               )}
+              
+              {/* Mode Fretboard Visualization */}
+              <FretboardVisualization 
+                mode={{ mode: selectedMode, root: modeRoot, notes: modeNotes }}
+                variant="mode"
+              />
               
               <Card className="p-3 bg-primary/5 border-primary/20">
                 <h4 className="font-semibold text-sm mb-2">🎵 Mode Practice Tip</h4>
