@@ -5,6 +5,7 @@ import DiceInterface from "@/components/dice-interface";
 import ChordChart from "@/components/chord-chart";
 import PentatonicGuide from "@/components/pentatonic-guide";
 import AdvancedScaleGuide from "@/components/advanced-scale-guide";
+import ScaleCombination from "@/components/scale-combination";
 import RiffModal from "@/components/riff-modal";
 import FretboardModal from "@/components/fretboard-modal";
 import SubscriptionModal from "@/components/subscription-modal";
@@ -285,6 +286,9 @@ export default function Home() {
 
         {/* Scale Guide - Premium or Basic */}
         <AdvancedScaleGuide onUpgrade={() => setShowSubscriptionModal(true)} />
+
+        {/* Scale Combinations - Premium Feature */}
+        <ScaleCombination onUpgrade={() => setShowSubscriptionModal(true)} />
 
         {/* Quick Actions */}
         <div className="bg-card rounded-lg p-4 border border-border">
