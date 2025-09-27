@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Crown, Lock } from "lucide-react";
 
 interface ScaleType {
@@ -77,9 +78,12 @@ interface AdvancedScaleGuideProps {
 }
 
 export default function AdvancedScaleGuide({ onUpgrade }: AdvancedScaleGuideProps) {
-  const { hasActiveSubscription } = useSubscription();
+  const subscription = useSubscription();
+  const { hasActiveSubscription } = subscription;
+  const { isDemoMode } = useAuthContext();
   const [selectedScale, setSelectedScale] = useState<string>("major_pentatonic");
   const [selectedKey, setSelectedKey] = useState<string>("C");
+
 
   if (!hasActiveSubscription) {
     return (
@@ -140,10 +144,12 @@ export default function AdvancedScaleGuide({ onUpgrade }: AdvancedScaleGuideProp
         <h2 className="text-lg font-semibold flex items-center">
           <i className="fas fa-music mr-2 text-primary"></i>Advanced Scale Guide
         </h2>
-        <Badge variant="secondary" className="bg-primary/10 text-primary">
-          <Crown className="mr-1 h-3 w-3" />
-          Premium
-        </Badge>
+        {!isDemoMode && (
+          <Badge variant="secondary" className="bg-primary/10 text-primary">
+            <Crown className="mr-1 h-3 w-3" />
+            Premium
+          </Badge>
+        )}
       </div>
 
       <Tabs value={selectedScale} onValueChange={setSelectedScale} className="w-full">
