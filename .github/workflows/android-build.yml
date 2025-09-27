@@ -39,6 +39,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Install Android SDK components
+      run: |
+        sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      
     - name: Make gradlew executable
       run: chmod +x android/gradlew
       
@@ -54,10 +58,10 @@ jobs:
         echo "Build gradle:"
         ls -la android/app/build.gradle || echo "build.gradle not found"
       
-    - name: Decode and setup keystore
+    - name: Decode and setup upload keystore
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
+        echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/upload-keystore.jks
         echo "KEYSTORE_FILE=true" >> $GITHUB_ENV
         echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
