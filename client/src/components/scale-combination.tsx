@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Crown, Lock, Shuffle, Music, Guitar } from "lucide-react";
+import { Crown, Lock, Shuffle, Music, Guitar, BookOpen } from "lucide-react";
+import { modes, NOTES, ModeDef, buildScaleByIntervals, generateRelatedScales } from "@/lib/music-data";
 
 interface ScaleInfo {
   name: string;
@@ -103,6 +104,12 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
   const [selectedTab, setSelectedTab] = useState<string>("combinations");
   const [scaleCombination, setScaleCombination] = useState<ScaleInfo[]>([]);
   const [octaveCombination, setOctaveCombination] = useState<OctaveChord[]>([]);
+  
+  // Mode-related state
+  const [selectedMode, setSelectedMode] = useState<ModeDef | null>(null);
+  const [modeRoot, setModeRoot] = useState<string>('');
+  const [modeNotes, setModeNotes] = useState<string[]>([]);
+  const [relatedScales, setRelatedScales] = useState<Array<{name: string, notes: string[], type: string}>>([]);
 
   if (!hasActiveSubscription) {
     return (
@@ -305,6 +312,26 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
     setOctaveCombination(shuffled.slice(0, numChords));
   };
 
+  const generateRandomMode = () => {
+    // Pick random root note
+    const randomRoot = NOTES[Math.floor(Math.random() * NOTES.length)];
+    
+    // Pick random mode
+    const randomMode = modes[Math.floor(Math.random() * modes.length)];
+    
+    // Build mode notes
+    const notes = buildScaleByIntervals(randomRoot, randomMode.intervals);
+    
+    // Generate related scales
+    const related = generateRelatedScales(randomMode, randomRoot);
+    
+    // Update state
+    setSelectedMode(randomMode);
+    setModeRoot(randomRoot);
+    setModeNotes(notes);
+    setRelatedScales(related);
+  };
+
   return (
     <div className="bg-card rounded-lg p-4 border border-border">
       <div className="flex items-center justify-between mb-4">
@@ -321,9 +348,10 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="combinations" className="text-sm">Scale Mix</TabsTrigger>
           <TabsTrigger value="octaves" className="text-sm">Octave Chords</TabsTrigger>
+          <TabsTrigger value="modes" className="text-sm">Modes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="combinations" className="space-y-4">
@@ -431,6 +459,129 @@ export default function ScaleCombination({ onUpgrade }: ScaleCombinationProps) {
                 <p className="text-xs text-muted-foreground">
                   Play these chord positions in sequence to create rich harmonic textures. 
                   The octave variations add depth and movement to your progressions.
+                </p>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="modes" className="space-y-4">
+          <div className="text-center">
+            <Button 
+              onClick={generateRandomMode} 
+              className="w-full mb-4"
+              data-testid="button-generate-mode"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Generate Random Mode
+            </Button>
+          </div>
+
+          {selectedMode && (
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-center">
+                {modeRoot} {selectedMode.name} Mode
+              </h3>
+              
+              {/* Mode Summary */}
+              <Card className="p-4 border" style={{ borderColor: selectedMode.color }}>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge 
+                      className="text-white" 
+                      style={{ backgroundColor: selectedMode.color }}
+                    >
+                      {selectedMode.quality.charAt(0).toUpperCase() + selectedMode.quality.slice(1)}
+                    </Badge>
+                    <span className="text-sm font-medium">
+                      {selectedMode.parentMajor}° of Major Scale
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground">
+                    {selectedMode.description}
+                  </p>
+                  
+                  {/* Mode Formula */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Degree Formula:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedMode.degreeFormula.map((degree, index) => (
+                        <Badge 
+                          key={index}
+                          variant={selectedMode.characteristicDegrees.includes(index + 1) ? "default" : "outline"}
+                          className="text-xs"
+                          data-testid={`mode-degree-${index}`}
+                        >
+                          {degree}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Mode Notes */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Mode Notes:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {modeNotes.map((note, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="outline" 
+                          className="text-xs"
+                          data-testid={`mode-note-${index}`}
+                        >
+                          {note}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Parent Major Info */}
+                  <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                    💡 <strong>Theory:</strong> {selectedMode.name} shares the same notes as the{' '}
+                    {modeNotes[selectedMode.parentMajor - 1]} major scale, but starts from {modeRoot}.
+                  </div>
+                </div>
+              </Card>
+              
+              {/* Related Scales */}
+              {relatedScales.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">Related In-Mode Scales:</h4>
+                  <div className="grid gap-3">
+                    {relatedScales.map((scale, index) => (
+                      <Card key={index} className="p-3 border border-dashed">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="secondary">
+                            {scale.name}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {scale.type}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {scale.notes.map((note, noteIndex) => (
+                            <Badge 
+                              key={noteIndex} 
+                              variant="outline" 
+                              className="text-xs"
+                              data-testid={`related-note-${index}-${noteIndex}`}
+                            >
+                              {note}
+                            </Badge>
+                          ))}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <Card className="p-3 bg-primary/5 border-primary/20">
+                <h4 className="font-semibold text-sm mb-2">🎵 Mode Practice Tip</h4>
+                <p className="text-xs text-muted-foreground">
+                  Focus on the characteristic degrees (highlighted) that give this mode its unique sound. 
+                  Practice the related scales to build familiarity with the mode's harmonic possibilities.
                 </p>
               </Card>
             </div>
