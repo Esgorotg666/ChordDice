@@ -347,14 +347,15 @@ export const generateRelatedScales = (mode: ModeDef, root: string): Array<{name:
     relatedScales.push({name: `${mode.quality.charAt(0).toUpperCase() + mode.quality.slice(1)} Triad`, notes: triadNotes, type: 'arpeggio'});
   }
   
-  // Seventh arpeggio
+  // Seventh arpeggio - derive 7th interval from mode notes
   let seventhNotes: string[];
+  const seventhDegreeNote = modeNotes[6]; // 7th degree note from the mode
   if (mode.quality === 'major') {
-    seventhNotes = [...triadNotes, transpose(root, 11)]; // Add major 7th
+    seventhNotes = [...triadNotes, seventhDegreeNote]; // Natural 7th from mode
   } else if (mode.quality === 'minor') {
-    seventhNotes = [...triadNotes, transpose(root, 10)]; // Add minor 7th
-  } else { // diminished
-    seventhNotes = [...triadNotes, transpose(root, 9)]; // Add diminished 7th (maj6)
+    seventhNotes = [...triadNotes, seventhDegreeNote]; // ♭7th from mode
+  } else { // diminished (Locrian - should be m7♭5)
+    seventhNotes = [...triadNotes, seventhDegreeNote]; // ♭7th from mode for half-diminished
   }
   
   if (isSubset(seventhNotes, modeNotes)) {
