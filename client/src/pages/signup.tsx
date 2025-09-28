@@ -7,7 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { registerUserSchema, type RegisterUser } from "@shared/schema";
+import { type RegisterUser } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserPlus, Mail, User } from "lucide-react";
@@ -18,10 +18,15 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Signup form schema with validation
+  const signupSchema = z.object({
+    username: z.string().min(1, "Username is required"),
+    email: z.string().email("Valid email is required"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+  });
+
   const form = useForm<RegisterUser>({
-    resolver: zodResolver(registerUserSchema.extend({
-      password: z.string().min(6, "Password must be at least 6 characters")
-    })),
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       username: "",
       email: "",
@@ -101,7 +106,8 @@ export default function SignupPage() {
                           placeholder="Choose a username" 
                           className="pl-10" 
                           data-testid="input-username"
-                          {...field} 
+                          {...field}
+                          value={field.value || ""}
                         />
                       </div>
                     </FormControl>
@@ -146,7 +152,8 @@ export default function SignupPage() {
                           placeholder="Create a password (min. 6 characters)" 
                           className="pr-10"
                           data-testid="input-password"
-                          {...field} 
+                          {...field}
+                          value={field.value || ""}
                         />
                         <Button
                           type="button"
