@@ -72,6 +72,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom auth routes
   app.use('/api/auth', authRoutes);
 
+  // Account deletion endpoint for Google Play Store compliance
+  app.post("/api/delete-account", async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).send("Email is required");
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).send("Account not found");
+      }
+
+      // Delete all user data
+      await storage.deleteUserCascade(user.id);
+      
+      res.status(200).send("Account deleted successfully");
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      res.status(500).send("Internal server error");
+    }
+  });
+
   // Check subscription status
   app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {

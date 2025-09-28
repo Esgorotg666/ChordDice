@@ -25,7 +25,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />
-      <Route path="/delete-account" component={DeleteAccountPage} />
+      <Route path="/delete-account" component={AccountDeletionInfoPage} />
       <Route path="/account-deletion" component={AccountDeletionInfoPage} />
       <Route path="/referrals" component={ReferralsPage} />
       <Route path="/chat" component={ChatPage} />
