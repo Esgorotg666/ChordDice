@@ -1,6 +1,6 @@
 # 🚀 Deploy to Google Play Store
 
-Your Chord Riff Generator is now ready for Google Play Store! Here's the simple process:
+Your Chord Riff Generator is now ready for Google Play Store with **automatic deployment**! Here's the complete process:
 
 ## 📋 Prerequisites
 
@@ -12,16 +12,62 @@ Your Chord Riff Generator is now ready for Google Play Store! Here's the simple 
    - You need to create a keystore file for signing your app
    - Follow the setup instructions in the "🔐 Keystore Setup" section below
 
-## 🔄 Automatic Build Process (GitHub Actions)
+3. **Google Cloud Service Account** - **NEW: For Automatic Deployment**
+   - Required for automatic uploads to Google Play Store
+   - Follow setup in "🤖 Automatic Deployment Setup" section
+
+## 🔄 Enhanced Build & Deploy Process (GitHub Actions)
 
 Every time you push code to GitHub, your app will automatically:
 - ✅ Build the React web app
 - ✅ Generate signed Android APK (for testing)
 - ✅ Generate signed Android App Bundle (AAB for Google Play)
 - ✅ Verify both APK and AAB are properly signed
-- ✅ Make files available for download
+- ✅ **NEW**: Automatically upload to Google Play Store Internal Testing
+- ✅ Make files available for download as backup
+
+## 🤖 Automatic Deployment Setup (RECOMMENDED)
+
+### Step 1: Google Cloud Service Account Setup
+
+1. **Create Google Cloud Project**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create new project or select existing one
+   - Enable "Google Play Android Developer API"
+
+2. **Create Service Account**
+   - Go to IAM & Admin → Service Accounts
+   - Click "Create Service Account"
+   - Name: `play-store-deploy`
+   - Download JSON key file (keep secure!)
+
+3. **Add Service Account to Play Console**
+   - Go to [Google Play Console](https://play.google.com/console/)
+   - Users and permissions → Invite new users
+   - Add service account email from JSON
+   - Grant permissions: Manage releases, View app info
+
+### Step 2: GitHub Secrets Setup
+Add to your GitHub repository (Settings → Secrets → Actions):
+```
+SERVICE_ACCOUNT_JSON - Copy entire JSON file content
+```
+
+### Step 3: First Manual Upload (Required)
+**Important**: Upload one release manually first to create app entry:
+1. Create app in Google Play Console
+2. Upload AAB to Internal Testing
+3. This enables automatic uploads for future releases
 
 ## 📱 Publishing Steps
+
+### Option A: Automatic (After Setup Above)
+- ✅ **Push to main branch** - That's it!
+- ✅ GitHub Actions automatically uploads to Internal Testing
+- ✅ Check Google Play Console to promote through tracks
+- ✅ Internal → Alpha → Beta → Production
+
+### Option B: Manual (Backup Method)
 
 ### 1. Get Your Built App
 - Go to your GitHub repository
@@ -39,10 +85,10 @@ Every time you push code to GitHub, your app will automatically:
   - **Free or paid**: Free (with in-app purchases)
 
 ### 3. Upload Your App Bundle
-- Go to "Production" → "Releases"
+- Go to "Testing" → "Internal testing"
 - Click "Create new release"
 - Upload your **app-release.aab** file
-- Add release notes: "Initial release - AI-powered chord progression generator"
+- Add release notes: "AI-powered chord progression generator"
 
 ### 4. Complete Store Listing
 - **App description**: Copy from your web app
@@ -95,13 +141,33 @@ Copy the output and paste it as `KEYSTORE_BASE64` secret.
 
 ## 🔄 Future Updates
 
-To update your app:
+### With Automatic Deployment (Recommended):
+1. Make changes in Replit
+2. **Push to GitHub main branch**
+3. ✅ **Done!** - App automatically uploads to Internal Testing
+4. **Promote** through tracks in Google Play Console (Internal → Alpha → Beta → Production)
+
+### Manual Process (Backup):
 1. Make changes in Replit
 2. Push to GitHub  
 3. Download new signed AAB from GitHub Actions
 4. Upload to Google Play Console as new release
 
 **Note**: Each release needs a higher `versionCode`. Update this in `android/app/build.gradle` before releasing.
+
+## 📊 Track Management Strategy
+
+### Deployment Tracks:
+1. **Internal Testing** (Automatic) - Small team, up to 100 testers
+2. **Alpha** (Manual promote) - Closed testing, larger group
+3. **Beta** (Manual promote) - Open testing or closed beta
+4. **Production** (Manual promote) - Live release to all users
+
+### Promoting Releases:
+1. Go to Google Play Console → Your App
+2. Navigate to current track (e.g., Internal testing)
+3. Find your release → Click "Promote release"
+4. Choose target track → Review and publish
 
 ## 🎵 Ready to Launch!
 
