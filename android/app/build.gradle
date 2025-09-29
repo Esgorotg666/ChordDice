@@ -17,7 +17,7 @@ android {
         }
     }
     // Determine if we should sign the release build
-    def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
+    def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "android/keystore.jks"
     def shouldSign = System.getenv("KEYSTORE_PASSWORD") && System.getenv("KEY_ALIAS") && System.getenv("KEY_PASSWORD") && file(keystoreFile).exists()
     
     signingConfigs {
