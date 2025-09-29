@@ -75,7 +75,6 @@ jobs:
         ls -la android/app/build.gradle || echo "build.gradle not found"
       
     - name: Validate required secrets
-      if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       run: |
         if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
           echo "❌ ERROR: KEYSTORE_BASE64 secret is missing"
@@ -96,7 +95,6 @@ jobs:
         echo "✅ All required secrets are present"
         
     - name: Decode and setup upload keystore
-      if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       run: |
         # Create the keystore where the build expects it
         mkdir -p android/app/android
