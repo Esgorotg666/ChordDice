@@ -51,7 +51,13 @@ Every time you push code to GitHub, your app will automatically:
 Add to your GitHub repository (Settings → Secrets → Actions):
 ```
 SERVICE_ACCOUNT_JSON - Copy entire JSON file content
+KEYSTORE_BASE64 - Base64 encoded keystore file
+KEYSTORE_PASSWORD - Your keystore password  
+KEY_ALIAS - Your keystore alias
+KEY_PASSWORD - Your key password
 ```
+
+**Critical**: Use `KEYSTORE_BASE64` (not `KEYSTORE_B64`) as the secret name.
 
 ### Step 3: First Manual Upload (Required)
 **Important**: Upload one release manually first to create app entry:
@@ -62,7 +68,8 @@ SERVICE_ACCOUNT_JSON - Copy entire JSON file content
 ## 📱 Publishing Steps
 
 ### Option A: Automatic (After Setup Above)
-- ✅ **Push to main branch** - That's it!
+- ✅ **Create version tag** (e.g., `git tag v1.0.0 && git push origin v1.0.0`)
+- ✅ **Or use manual workflow** (Actions → Run workflow → Enable deployment)
 - ✅ GitHub Actions automatically uploads to Internal Testing
 - ✅ Check Google Play Console to promote through tracks
 - ✅ Internal → Alpha → Beta → Production
@@ -143,9 +150,14 @@ Copy the output and paste it as `KEYSTORE_BASE64` secret.
 
 ### With Automatic Deployment (Recommended):
 1. Make changes in Replit
-2. **Push to GitHub main branch**
+2. **Create version tag**: `git tag v1.2.0 && git push origin v1.2.0`
 3. ✅ **Done!** - App automatically uploads to Internal Testing
 4. **Promote** through tracks in Google Play Console (Internal → Alpha → Beta → Production)
+
+### Alternative: Manual Workflow Trigger
+1. Go to GitHub → Actions → "Build and Deploy Android App"
+2. Click "Run workflow" → Enable "Deploy to Google Play Store"
+3. ✅ **Done!** - Manual deployment to Internal Testing
 
 ### Manual Process (Backup):
 1. Make changes in Replit
