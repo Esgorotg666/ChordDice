@@ -18,11 +18,17 @@ android {
     }
     signingConfigs {
         release {
-            if (System.getenv("KEYSTORE_FILE")) {
+            def keystoreFile = System.getenv("KEYSTORE_FILE")
+            def keystorePath = System.getenv("KEYSTORE_PATH") 
+            def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+            def keyAlias = System.getenv("KEY_ALIAS")
+            def keyPassword = System.getenv("KEY_PASSWORD")
+            
+            if (keystoreFile || (keystorePath && keystorePassword && keyAlias && keyPassword)) {
                 storeFile file("upload-keystore.jks")
-                storePassword System.getenv("KEYSTORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
             }
         }
     }
