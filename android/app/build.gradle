@@ -25,7 +25,7 @@ android {
             def keyPassword = System.getenv("KEY_PASSWORD")
             
             if (keystoreFile || (keystorePath && keystorePassword && keyAlias && keyPassword)) {
-                storeFile file(keystoreFile ?: "upload-keystore.jks")
+                storeFile file(keystoreFile ?: "android/keystore.jks")
                 storePassword keystorePassword
                 keyAlias keyAlias
                 keyPassword keyPassword

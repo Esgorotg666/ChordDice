@@ -98,13 +98,15 @@ jobs:
     - name: Decode and setup upload keystore
       if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-        echo "KEYSTORE_FILE=upload-keystore.jks" >> $GITHUB_ENV
-        echo "KEYSTORE_PATH=upload-keystore.jks" >> $GITHUB_ENV
+        # Create the keystore where the build expects it
+        mkdir -p android/app/android
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/android/keystore.jks
+        echo "KEYSTORE_FILE=android/keystore.jks" >> $GITHUB_ENV
+        echo "KEYSTORE_PATH=android/keystore.jks" >> $GITHUB_ENV
         echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-        ls -la android/app/upload-keystore.jks || echo "Keystore not found!"
+        ls -la android/app/android/keystore.jks || echo "Keystore not found!"
         
     - name: Build and Sign Android APK
       run: |
