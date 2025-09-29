@@ -16,19 +16,17 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Determine if we should sign the release build
+    def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
+    def shouldSign = System.getenv("KEYSTORE_PASSWORD") && System.getenv("KEY_ALIAS") && System.getenv("KEY_PASSWORD") && file(keystoreFile).exists()
+    
     signingConfigs {
-        release {
-            def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
-            def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-            def keyAlias = System.getenv("KEY_ALIAS")
-            def keyPassword = System.getenv("KEY_PASSWORD")
-            def hasKeystore = file(keystoreFile).exists()
-            
-            if (hasKeystore && keystorePassword && keyAlias && keyPassword) {
+        if (shouldSign) {
+            release {
                 storeFile file(keystoreFile)
-                storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
             }
         }
     }
@@ -41,9 +39,7 @@ android {
             testCoverageEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             
-            def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
-            def hasKeystore = file(keystoreFile).exists()
-            if (hasKeystore) {
+            if (shouldSign) {
                 signingConfig signingConfigs.release
             }
         }
