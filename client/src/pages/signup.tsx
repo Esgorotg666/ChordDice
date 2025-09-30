@@ -11,12 +11,14 @@ import { type RegisterUser } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Music2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function SignupPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Signup form schema with validation
   const signupSchema = z.object({
@@ -45,7 +47,14 @@ export default function SignupPage() {
         title: "Account created successfully!",
         description: "Please check your email to verify your account before logging in.",
       });
-      setLocation("/login");
+      
+      // Trigger transition animation
+      setIsTransitioning(true);
+      
+      // Navigate after animation
+      setTimeout(() => {
+        setLocation("/login");
+      }, 600);
     } catch (error: any) {
       console.error("Signup error:", error);
       
@@ -77,7 +86,19 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-[100svh] flex items-start justify-center bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-700 px-3 py-3 sm:py-8 relative overflow-hidden">
+    <motion.div 
+      className="min-h-[100svh] flex items-start justify-center bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-700 px-3 py-3 sm:py-8 relative overflow-hidden"
+      animate={isTransitioning ? { 
+        opacity: 0, 
+        scale: 0.95,
+        filter: "blur(10px)"
+      } : { 
+        opacity: 1, 
+        scale: 1,
+        filter: "blur(0px)"
+      }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+    >
       {/* Musical background decoration */}
       <div className="absolute inset-0 opacity-10 text-white pointer-events-none">
         <div className="absolute top-10 left-10 text-6xl font-bold">♪</div>
@@ -89,7 +110,17 @@ export default function SignupPage() {
         <div className="absolute bottom-1/4 left-1/3 text-4xl font-bold">♬</div>
       </div>
       
-      <Card className="w-full max-w-sm border-0 shadow-2xl bg-white/95 backdrop-blur-sm relative z-10">
+      <motion.div
+        animate={isTransitioning ? { 
+          y: -20,
+          opacity: 0 
+        } : { 
+          y: 0,
+          opacity: 1 
+        }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <Card className="w-full max-w-sm border-0 shadow-2xl bg-white/95 backdrop-blur-sm relative z-10">
         <CardHeader className="space-y-2 pb-3 sm:pb-6 pt-4 sm:pt-6">
           <div className="flex justify-center mb-2">
             <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
@@ -199,6 +230,7 @@ export default function SignupPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
