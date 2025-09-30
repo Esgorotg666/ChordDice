@@ -151,48 +151,48 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
+    <div className="min-h-[100svh] sm:min-h-screen flex items-start sm:items-center justify-center bg-background px-4 py-4">
+      <Card className="w-full max-w-sm sm:max-w-md max-h-[calc(100svh-2rem)] sm:max-h-none overflow-y-auto">
+        <CardHeader className="space-y-1 pb-4">
+          <div className="hidden sm:flex items-center justify-center mb-2 sm:mb-4">
             <div className="h-12 w-12 bg-primary rounded-lg flex items-center justify-center">
               <LogIn className="h-6 w-6 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-xl sm:text-2xl text-center">Welcome back</CardTitle>
+          <CardDescription className="text-center text-sm sm:text-base">
             Sign in to your Chord Dice account
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isVerified && (
-            <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
+            <Alert className="mb-2 text-sm py-2 border-green-200 bg-green-50 text-green-800">
               <div className="h-4 w-4 text-green-600">✓</div>
-              <AlertDescription>
-                <strong>Email verified successfully!</strong> You can now log in with your credentials.
+              <AlertDescription className="text-sm">
+                <strong>Email verified!</strong> You can now log in.
               </AlertDescription>
             </Alert>
           )}
           
           {needsVerification && (
-            <Alert className="mb-4">
+            <Alert className="mb-2 text-sm py-2">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Your email address needs to be verified before you can log in.{" "}
+              <AlertDescription className="text-sm">
+                Email needs verification.{" "}
                 <Button 
                   variant="link" 
-                  className="p-0 h-auto font-normal underline"
+                  className="p-0 h-auto font-normal underline text-sm"
                   onClick={resendVerification}
                   data-testid="button-resend-verification"
                 >
-                  Resend verification email
+                  Resend
                 </Button>
               </AlertDescription>
             </Alert>
           )}
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
               <FormField
                 control={form.control}
                 name="username"
