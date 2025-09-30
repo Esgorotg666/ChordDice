@@ -77,39 +77,28 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-[100svh] sm:min-h-screen flex items-start sm:items-center justify-center bg-background px-4 py-4">
-      <Card className="w-full max-w-sm sm:max-w-md max-h-[calc(100svh-2rem)] sm:max-h-none overflow-y-auto">
-        <CardHeader className="space-y-1 pb-4">
-          <div className="hidden sm:flex items-center justify-center mb-2 sm:mb-4">
-            <div className="h-12 w-12 bg-primary rounded-lg flex items-center justify-center">
-              <UserPlus className="h-6 w-6 text-primary-foreground" />
-            </div>
-          </div>
-          <CardTitle className="text-xl sm:text-2xl text-center">Create account</CardTitle>
-          <CardDescription className="text-center text-sm sm:text-base">
-            Join Chord Dice and start creating amazing music
-          </CardDescription>
+    <div className="min-h-[100svh] flex items-start justify-center bg-background px-3 py-3 sm:py-8">
+      <Card className="w-full max-w-sm border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="space-y-2 pb-3 sm:pb-6 pt-2 sm:pt-6">
+          <CardTitle className="text-lg sm:text-2xl text-center font-semibold">Create account</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel className="text-sm">Username</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="Choose a username" 
-                          className="pl-10" 
-                          data-testid="input-username"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </div>
+                      <Input 
+                        placeholder="Username" 
+                        className="h-10"
+                        data-testid="input-username"
+                        {...field}
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,18 +110,15 @@ export default function SignupPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-sm">Email</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          type="email" 
-                          placeholder="Enter your email" 
-                          className="pl-10"
-                          data-testid="input-email"
-                          {...field} 
-                        />
-                      </div>
+                      <Input 
+                        type="email" 
+                        placeholder="Email" 
+                        className="h-10"
+                        data-testid="input-email"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -144,13 +130,13 @@ export default function SignupPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-sm">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input 
                           type={showPassword ? "text" : "password"}
-                          placeholder="Create a password (min. 6 characters)" 
-                          className="pr-10"
+                          placeholder="Min. 6 characters" 
+                          className="pr-10 h-10"
                           data-testid="input-password"
                           {...field}
                           value={field.value || ""}
@@ -159,7 +145,7 @@ export default function SignupPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          className="absolute right-0 top-0 h-10 px-3 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                           data-testid="button-toggle-password"
                         >
@@ -178,20 +164,20 @@ export default function SignupPage() {
               
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full h-10 mt-2" 
                 disabled={isSubmitting}
                 data-testid="button-signup"
               >
-                {isSubmitting ? "Creating account..." : "Create account"}
+                {isSubmitting ? "Creating..." : "Create account"}
               </Button>
             </form>
           </Form>
           
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Already have an account? </span>
+          <div className="mt-4 text-center text-sm">
+            <span className="text-muted-foreground">Have an account? </span>
             <Link href="/login">
               <Button variant="link" className="p-0 h-auto font-normal" data-testid="link-login">
-                Sign in here
+                Sign in
               </Button>
             </Link>
           </div>

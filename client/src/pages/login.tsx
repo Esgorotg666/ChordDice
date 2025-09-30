@@ -151,37 +151,29 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[100svh] sm:min-h-screen flex items-start sm:items-center justify-center bg-background px-4 py-4">
-      <Card className="w-full max-w-sm sm:max-w-md max-h-[calc(100svh-2rem)] sm:max-h-none overflow-y-auto">
-        <CardHeader className="space-y-1 pb-4">
-          <div className="hidden sm:flex items-center justify-center mb-2 sm:mb-4">
-            <div className="h-12 w-12 bg-primary rounded-lg flex items-center justify-center">
-              <LogIn className="h-6 w-6 text-primary-foreground" />
-            </div>
-          </div>
-          <CardTitle className="text-xl sm:text-2xl text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center text-sm sm:text-base">
-            Sign in to your Chord Dice account
-          </CardDescription>
+    <div className="min-h-[100svh] flex items-start justify-center bg-background px-3 py-3 sm:py-8">
+      <Card className="w-full max-w-sm border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="space-y-2 pb-3 sm:pb-6 pt-2 sm:pt-6">
+          <CardTitle className="text-lg sm:text-2xl text-center font-semibold">Welcome back</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {isVerified && (
-            <Alert className="mb-2 text-sm py-2 border-green-200 bg-green-50 text-green-800">
+            <Alert className="mb-3 text-sm py-2 border-green-200 bg-green-50 text-green-800">
               <div className="h-4 w-4 text-green-600">✓</div>
-              <AlertDescription className="text-sm">
-                <strong>Email verified!</strong> You can now log in.
+              <AlertDescription className="text-xs">
+                Email verified! You can log in.
               </AlertDescription>
             </Alert>
           )}
           
           {needsVerification && (
-            <Alert className="mb-2 text-sm py-2">
+            <Alert className="mb-3 text-sm py-2">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                Email needs verification.{" "}
+              <AlertDescription className="text-xs">
+                Verify email first.{" "}
                 <Button 
                   variant="link" 
-                  className="p-0 h-auto font-normal underline text-sm"
+                  className="p-0 h-auto font-normal underline text-xs"
                   onClick={resendVerification}
                   data-testid="button-resend-verification"
                 >
@@ -192,23 +184,20 @@ export default function LoginPage() {
           )}
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel className="text-sm">Username</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="Enter your username" 
-                          className="pl-10"
-                          data-testid="input-username"
-                          {...field} 
-                        />
-                      </div>
+                      <Input 
+                        placeholder="Username" 
+                        className="h-10"
+                        data-testid="input-username"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -220,13 +209,13 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-sm">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input 
                           type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password" 
-                          className="pr-10"
+                          placeholder="Password" 
+                          className="pr-10 h-10"
                           data-testid="input-password"
                           {...field} 
                         />
@@ -234,7 +223,7 @@ export default function LoginPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          className="absolute right-0 top-0 h-10 px-3 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                           data-testid="button-toggle-password"
                         >
@@ -251,17 +240,9 @@ export default function LoginPage() {
                 )}
               />
               
-              <div className="text-right">
-                <Link href="/forgot-password">
-                  <Button variant="link" className="p-0 h-auto font-normal text-sm" data-testid="link-forgot-password">
-                    Forgot your password?
-                  </Button>
-                </Link>
-              </div>
-              
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full h-10 mt-2" 
                 disabled={isSubmitting}
                 data-testid="button-login"
               >
@@ -270,11 +251,11 @@ export default function LoginPage() {
             </form>
           </Form>
           
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
+          <div className="mt-4 text-center text-sm">
+            <span className="text-muted-foreground">No account? </span>
             <Link href="/signup">
               <Button variant="link" className="p-0 h-auto font-normal" data-testid="link-signup">
-                Sign up here
+                Sign up
               </Button>
             </Link>
           </div>
