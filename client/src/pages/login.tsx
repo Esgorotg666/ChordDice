@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginUserSchema, type LoginUser } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, LogIn, User, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Music2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
@@ -151,10 +151,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[100svh] flex items-start justify-center bg-background px-3 py-3 sm:py-8">
-      <Card className="w-full max-w-sm border-0 sm:border shadow-none sm:shadow-sm">
-        <CardHeader className="space-y-2 pb-3 sm:pb-6 pt-2 sm:pt-6">
-          <CardTitle className="text-lg sm:text-2xl text-center font-semibold">Welcome back</CardTitle>
+    <div className="min-h-[100svh] flex items-start justify-center bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-700 px-3 py-3 sm:py-8 relative overflow-hidden">
+      {/* Musical background decoration */}
+      <div className="absolute inset-0 opacity-10 text-white pointer-events-none">
+        <div className="absolute top-10 left-10 text-6xl font-bold">♪</div>
+        <div className="absolute top-20 right-20 text-5xl font-bold">♫</div>
+        <div className="absolute bottom-32 left-1/4 text-4xl font-bold">C</div>
+        <div className="absolute top-1/3 right-1/4 text-4xl font-bold">G</div>
+        <div className="absolute bottom-20 right-16 text-6xl font-bold">♩</div>
+        <div className="absolute top-1/2 left-12 text-5xl font-bold">Am</div>
+        <div className="absolute bottom-1/4 left-1/3 text-4xl font-bold">♬</div>
+      </div>
+      
+      <Card className="w-full max-w-sm border-0 shadow-2xl bg-white/95 backdrop-blur-sm relative z-10">
+        <CardHeader className="space-y-2 pb-3 sm:pb-6 pt-4 sm:pt-6">
+          <div className="flex justify-center mb-2">
+            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Music2 className="h-7 w-7 text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-lg sm:text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Welcome back</CardTitle>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
           {isVerified && (
@@ -242,7 +258,7 @@ export default function LoginPage() {
               
               <Button 
                 type="submit" 
-                className="w-full h-10 mt-2" 
+                className="w-full h-10 mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold shadow-lg" 
                 disabled={isSubmitting}
                 data-testid="button-login"
               >
@@ -252,9 +268,9 @@ export default function LoginPage() {
           </Form>
           
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">No account? </span>
+            <span className="text-gray-600">No account? </span>
             <Link href="/signup">
-              <Button variant="link" className="p-0 h-auto font-normal" data-testid="link-signup">
+              <Button variant="link" className="p-0 h-auto font-semibold text-purple-600 hover:text-purple-700" data-testid="link-signup">
                 Sign up
               </Button>
             </Link>
