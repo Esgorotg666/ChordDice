@@ -16,17 +16,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Determine if we should sign the release build
+    // Signing configuration for release builds
     def keystoreFile = System.getenv("KEYSTORE_FILE") ?: "android/keystore.jks"
-    def shouldSign = System.getenv("KEYSTORE_PASSWORD") && System.getenv("KEY_ALIAS") && System.getenv("KEY_PASSWORD") && file(keystoreFile).exists()
+    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+    def keyAlias = System.getenv("KEY_ALIAS")
+    def keyPassword = System.getenv("KEY_PASSWORD")
+    
+    // Check if we should sign (all env vars present and keystore file exists)
+    def shouldSign = keystorePassword && keyAlias && keyPassword && file(keystoreFile).exists()
     
     signingConfigs {
         if (shouldSign) {
             release {
                 storeFile file(keystoreFile)
-                storePassword System.getenv("KEYSTORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
             }
         }
     }
