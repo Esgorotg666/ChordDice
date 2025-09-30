@@ -88,12 +88,23 @@ jobs:
         ls -la android/app/android/keystore.jks
         
     - name: Build Android APK
+      env:
+        KEYSTORE_FILE: android/keystore.jks
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd android
+        echo "Building with keystore at: $KEYSTORE_FILE"
         ./gradlew clean
         ./gradlew assembleRelease --no-daemon --stacktrace
         
     - name: Build Android App Bundle (AAB)
+      env:
+        KEYSTORE_FILE: android/keystore.jks
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd android
         ./gradlew bundleRelease --no-daemon --stacktrace
