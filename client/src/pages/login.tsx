@@ -161,7 +161,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your Chord Riff Generator account
+            Sign in to your Chord Dice account
           </CardDescription>
         </CardHeader>
         <CardContent>

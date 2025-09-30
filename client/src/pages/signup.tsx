@@ -87,7 +87,7 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl text-center">Create account</CardTitle>
           <CardDescription className="text-center">
-            Join Chord Riff Generator and start creating amazing music
+            Join Chord Dice and start creating amazing music
           </CardDescription>
         </CardHeader>
         <CardContent>
