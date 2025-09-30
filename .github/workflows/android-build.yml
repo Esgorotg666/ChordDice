@@ -74,29 +74,7 @@ jobs:
         echo "Build gradle:"
         ls -la android/app/build.gradle || echo "build.gradle not found"
       
-    - name: Validate required secrets
-      if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
-      run: |
-        if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-          echo "❌ ERROR: KEYSTORE_BASE64 secret is missing"
-          exit 1
-        fi
-        if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
-          echo "❌ ERROR: KEYSTORE_PASSWORD secret is missing" 
-          exit 1
-        fi
-        if [ -z "${{ secrets.KEY_ALIAS }}" ]; then
-          echo "❌ ERROR: KEY_ALIAS secret is missing"
-          exit 1
-        fi
-        if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
-          echo "❌ ERROR: KEY_PASSWORD secret is missing"
-          exit 1
-        fi
-        echo "✅ All required secrets are present"
-        
     - name: Decode and setup upload keystore
-      if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       run: |
         # Create the keystore where the build expects it
         mkdir -p android/app/android
@@ -106,20 +84,16 @@ jobs:
         echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-        ls -la android/app/android/keystore.jks || echo "Keystore not found!"
+        echo "✅ Keystore created at:"
+        ls -la android/app/android/keystore.jks
         
-    - name: Build Android APK (Debug for testing, Release for deploy)
+    - name: Build Android APK
       run: |
         cd android
         ./gradlew clean
-        if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]] || [ "${{ github.event.inputs.deploy_to_play_store }}" = "true" ]; then
-          ./gradlew assembleRelease --no-daemon --stacktrace
-        else
-          ./gradlew assembleDebug --no-daemon --stacktrace
-        fi
+        ./gradlew assembleRelease --no-daemon --stacktrace
         
-    - name: Build Android App Bundle (AAB) for deployment only
-      if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
+    - name: Build Android App Bundle (AAB)
       run: |
         cd android
         ./gradlew bundleRelease --no-daemon --stacktrace
