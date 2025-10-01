@@ -65,59 +65,6 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
       
-    - name: Fix build.gradle signing config after sync
-      run: |
-        cat > /tmp/signing_config.txt << 'EOF'
-    // Signing configuration - supports both KEYSTORE_FILE and KEYSTORE_PATH
-    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "keystore.jks"
-    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-    def keyAlias = System.getenv("KEY_ALIAS")
-    def keyPassword = System.getenv("KEY_PASSWORD")
-    def keystoreExists = keystoreFilePath ? file(keystoreFilePath).exists() : false
-    def shouldSign = keystorePassword && keyAlias && keyPassword && keystoreExists
-    
-    signingConfigs {
-        if (shouldSign) {
-            release {
-                storeFile file(keystoreFilePath)
-                storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
-            }
-        }
-    }
-EOF
-        
-        # Remove any existing signing config and insert new one after defaultConfig
-        python3 << 'PYTHON'
-import re
-with open('android/app/build.gradle', 'r') as f:
-    content = f.read()
-
-# Remove old signing config if it exists
-content = re.sub(r'def keystoreFile.*?(?=\n    buildTypes|\n    signingConfigs|\Z)', '', content, flags=re.DOTALL)
-content = re.sub(r'def shouldSign.*?(?=\n    buildTypes|\n    signingConfigs|\Z)', '', content, flags=re.DOTALL)  
-content = re.sub(r'signingConfigs \{.*?\n    \}', '', content, flags=re.DOTALL)
-
-# Insert new signing config after defaultConfig block
-with open('/tmp/signing_config.txt', 'r') as f:
-    signing_config = f.read()
-
-# Find the end of defaultConfig and insert signing config
-content = re.sub(
-    r'(defaultConfig \{.*?\n    \})',
-    r'\1\n' + signing_config,
-    content,
-    flags=re.DOTALL
-)
-
-with open('android/app/build.gradle', 'w') as f:
-    f.write(content)
-PYTHON
-        
-        echo "✅ Signing config patched. Verifying..."
-        grep -A12 "Signing configuration" android/app/build.gradle || echo "Config added"
-      
     - name: Check Android setup
       run: |
         echo "Android project structure:"
@@ -127,18 +74,33 @@ PYTHON
         echo "Build gradle:"
         ls -la android/app/build.gradle || echo "build.gradle not found"
       
-    - name: Decode and setup upload keystore
+    - name: Setup keystore for signing
+      if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       run: |
-        # Create keystore directly in android/app/ directory
-        echo "Creating keystore at android/app/keystore.jks..."
+        echo "Creating and validating keystore..."
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
         
-        # Verify it exists
-        if [ -f android/app/keystore.jks ]; then
-          echo "✅ Keystore created successfully"
-          ls -lh android/app/keystore.jks
+        # Check file was created and has content
+        if [ ! -f android/app/keystore.jks ]; then
+          echo "❌ Keystore file not created"
+          exit 1
+        fi
+        
+        SIZE=$(stat -c%s android/app/keystore.jks)
+        if [ "$SIZE" -lt 100 ]; then
+          echo "❌ Keystore file is too small ($SIZE bytes) - likely invalid"
+          exit 1
+        fi
+        
+        # Validate keystore with keytool
+        keytool -list -v -keystore android/app/keystore.jks \
+          -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+          -alias "${{ secrets.KEY_ALIAS }}" 2>&1 | head -20
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Keystore validated successfully ($SIZE bytes)"
         else
-          echo "❌ Failed to create keystore"
+          echo "❌ Keystore validation failed - check your secrets"
           exit 1
         fi
         
@@ -190,13 +152,14 @@ PYTHON
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: chord-riff-generator-apk
-        path: android/app/build/outputs/apk/release/app-release.apk
+        name: chord-dice-apk
+        path: android/app/build/outputs/apk/release/app-release*.apk
         
     - name: Upload AAB
+      if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_play_store == 'true') }}
       uses: actions/upload-artifact@v4
       with:
-        name: chord-riff-generator-aab
+        name: chord-dice-aab
         path: android/app/build/outputs/bundle/release/app-release.aab
         
     - name: Validate Play Store secrets
