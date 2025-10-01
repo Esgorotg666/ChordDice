@@ -65,12 +65,58 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
       
-    - name: Restore build.gradle after sync
+    - name: Fix build.gradle signing config after sync
       run: |
-        echo "Capacitor sync may have overwritten build.gradle, restoring from git..."
-        git checkout android/app/build.gradle
-        echo "Verifying build.gradle has signing config..."
-        grep -A5 "KEYSTORE_FILE\|KEYSTORE_PATH" android/app/build.gradle || echo "WARNING: Signing config not found"
+        cat > /tmp/signing_config.txt << 'EOF'
+    // Signing configuration - supports both KEYSTORE_FILE and KEYSTORE_PATH
+    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "android/keystore.jks"
+    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+    def keyAlias = System.getenv("KEY_ALIAS")
+    def keyPassword = System.getenv("KEY_PASSWORD")
+    def keystoreExists = keystoreFilePath ? file(keystoreFilePath).exists() : false
+    def shouldSign = keystorePassword && keyAlias && keyPassword && keystoreExists
+    
+    signingConfigs {
+        if (shouldSign) {
+            release {
+                storeFile file(keystoreFilePath)
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
+            }
+        }
+    }
+EOF
+        
+        # Remove any existing signing config and insert new one after defaultConfig
+        python3 << 'PYTHON'
+import re
+with open('android/app/build.gradle', 'r') as f:
+    content = f.read()
+
+# Remove old signing config if it exists
+content = re.sub(r'def keystoreFile.*?(?=\n    buildTypes|\n    signingConfigs|\Z)', '', content, flags=re.DOTALL)
+content = re.sub(r'def shouldSign.*?(?=\n    buildTypes|\n    signingConfigs|\Z)', '', content, flags=re.DOTALL)  
+content = re.sub(r'signingConfigs \{.*?\n    \}', '', content, flags=re.DOTALL)
+
+# Insert new signing config after defaultConfig block
+with open('/tmp/signing_config.txt', 'r') as f:
+    signing_config = f.read()
+
+# Find the end of defaultConfig and insert signing config
+content = re.sub(
+    r'(defaultConfig \{.*?\n    \})',
+    r'\1\n' + signing_config,
+    content,
+    flags=re.DOTALL
+)
+
+with open('android/app/build.gradle', 'w') as f:
+    f.write(content)
+PYTHON
+        
+        echo "✅ Signing config patched. Verifying..."
+        grep -A12 "Signing configuration" android/app/build.gradle || echo "Config added"
       
     - name: Check Android setup
       run: |
