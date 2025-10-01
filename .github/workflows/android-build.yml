@@ -76,14 +76,29 @@ jobs:
       
     - name: Decode and setup upload keystore
       run: |
-        # Create keystore - Gradle evaluates file("android/keystore.jks") relative to android/app/
+        # Create keystore directory
         mkdir -p android/app/android
+        
+        # Decode and create keystore
+        echo "Decoding keystore from base64..."
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/android/keystore.jks
+        
+        # Verify keystore was created
+        echo "Checking if keystore file exists..."
         if [ -f android/app/android/keystore.jks ]; then
-          echo "✅ Keystore created successfully at android/app/android/keystore.jks"
+          echo "✅ Keystore created successfully"
+          echo "File size: $(stat -c%s android/app/android/keystore.jks) bytes"
+          echo "Full path: $(pwd)/android/app/android/keystore.jks"
           ls -lh android/app/android/keystore.jks
+          
+          # Also verify from android directory perspective
+          cd android
+          echo "From android/ directory, checking app/android/keystore.jks..."
+          ls -lh app/android/keystore.jks || echo "❌ NOT FOUND from android/ directory"
         else
-          echo "❌ Failed to create keystore file"
+          echo "❌ FAILED: Keystore file not created at android/app/android/keystore.jks"
+          echo "Directory contents:"
+          ls -la android/app/android/ || echo "Directory doesn't exist"
           exit 1
         fi
         
