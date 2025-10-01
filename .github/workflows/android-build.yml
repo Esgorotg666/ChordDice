@@ -65,6 +65,13 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
       
+    - name: Restore build.gradle after sync
+      run: |
+        echo "Capacitor sync may have overwritten build.gradle, restoring from git..."
+        git checkout android/app/build.gradle
+        echo "Verifying build.gradle has signing config..."
+        grep -A5 "KEYSTORE_FILE\|KEYSTORE_PATH" android/app/build.gradle || echo "WARNING: Signing config not found"
+      
     - name: Check Android setup
       run: |
         echo "Android project structure:"
