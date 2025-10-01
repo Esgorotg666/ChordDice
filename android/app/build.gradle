@@ -17,7 +17,7 @@ android {
         }
     }
     // Signing configuration - supports both KEYSTORE_FILE and KEYSTORE_PATH for compatibility
-    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "android/keystore.jks"
+    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "keystore.jks"
     def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
     def keyAlias = System.getenv("KEY_ALIAS")
     def keyPassword = System.getenv("KEY_PASSWORD")

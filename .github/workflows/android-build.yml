@@ -69,7 +69,7 @@ jobs:
       run: |
         cat > /tmp/signing_config.txt << 'EOF'
     // Signing configuration - supports both KEYSTORE_FILE and KEYSTORE_PATH
-    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "android/keystore.jks"
+    def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "keystore.jks"
     def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
     def keyAlias = System.getenv("KEY_ALIAS")
     def keyPassword = System.getenv("KEY_PASSWORD")
@@ -129,64 +129,35 @@ PYTHON
       
     - name: Decode and setup upload keystore
       run: |
-        # Create keystore directory
-        mkdir -p android/app/android
+        # Create keystore directly in android/app/ directory
+        echo "Creating keystore at android/app/keystore.jks..."
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
         
-        # Decode and create keystore
-        echo "Decoding keystore from base64..."
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/android/keystore.jks
-        
-        # Verify keystore was created
-        echo "Checking if keystore file exists..."
-        if [ -f android/app/android/keystore.jks ]; then
+        # Verify it exists
+        if [ -f android/app/keystore.jks ]; then
           echo "✅ Keystore created successfully"
-          echo "File size: $(stat -c%s android/app/android/keystore.jks) bytes"
-          echo "Full path: $(pwd)/android/app/android/keystore.jks"
-          ls -lh android/app/android/keystore.jks
-          
-          # Also verify from android directory perspective
-          cd android
-          echo "From android/ directory, checking app/android/keystore.jks..."
-          ls -lh app/android/keystore.jks || echo "❌ NOT FOUND from android/ directory"
+          ls -lh android/app/keystore.jks
         else
-          echo "❌ FAILED: Keystore file not created at android/app/android/keystore.jks"
-          echo "Directory contents:"
-          ls -la android/app/android/ || echo "Directory doesn't exist"
-          exit 1
-        fi
-        
-    - name: Verify keystore before build
-      run: |
-        echo "=== FINAL KEYSTORE VERIFICATION ==="
-        echo "Checking for keystore at: android/app/android/keystore.jks"
-        if [ -f android/app/android/keystore.jks ]; then
-          echo "✅ Keystore EXISTS"
-          ls -lh android/app/android/keystore.jks
-          echo "File size: $(stat -c%s android/app/android/keystore.jks) bytes"
-        else
-          echo "❌ KEYSTORE NOT FOUND!"
-          echo "Searching for any keystore files..."
-          find android -name "*.jks" -o -name "keystore*"
+          echo "❌ Failed to create keystore"
           exit 1
         fi
         
     - name: Build Android APK
       env:
-        KEYSTORE_FILE: android/keystore.jks
+        KEYSTORE_FILE: keystore.jks
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd android
-        echo "Building with keystore at: $KEYSTORE_FILE"
-        echo "Verifying keystore from build directory..."
-        ls -lh app/android/keystore.jks || echo "WARNING: Keystore not visible from android/ dir"
+        echo "Building with keystore at: app/$KEYSTORE_FILE"
+        ls -lh app/keystore.jks || echo "WARNING: Keystore not found"
         ./gradlew clean
         ./gradlew assembleRelease --no-daemon --stacktrace
         
     - name: Build Android App Bundle (AAB)
       env:
-        KEYSTORE_FILE: android/keystore.jks
+        KEYSTORE_FILE: keystore.jks
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
