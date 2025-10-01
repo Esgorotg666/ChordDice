@@ -18,21 +18,21 @@ android {
     }
     // Signing configuration - supports both KEYSTORE_FILE and KEYSTORE_PATH for compatibility
     def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: System.getenv("KEYSTORE_PATH") ?: "keystore.jks"
-    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-    def keyAlias = System.getenv("KEY_ALIAS")
-    def keyPassword = System.getenv("KEY_PASSWORD")
+    def keystorePwd = System.getenv("KEYSTORE_PASSWORD")
+    def keyAliasName = System.getenv("KEY_ALIAS")
+    def keyPwd = System.getenv("KEY_PASSWORD")
     
     // Only sign if all credentials are present AND keystore file actually exists
     def keystoreExists = file(keystoreFilePath).exists()
-    def shouldSign = keystorePassword && keyAlias && keyPassword && keystoreExists
+    def shouldSign = keystorePwd && keyAliasName && keyPwd && keystoreExists
     
     signingConfigs {
         if (shouldSign) {
             release {
                 storeFile file(keystoreFilePath)
-                storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
+                storePassword keystorePwd
+                keyAlias keyAliasName
+                keyPassword keyPwd
             }
         }
     }
