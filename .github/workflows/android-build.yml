@@ -155,6 +155,21 @@ PYTHON
           exit 1
         fi
         
+    - name: Verify keystore before build
+      run: |
+        echo "=== FINAL KEYSTORE VERIFICATION ==="
+        echo "Checking for keystore at: android/app/android/keystore.jks"
+        if [ -f android/app/android/keystore.jks ]; then
+          echo "✅ Keystore EXISTS"
+          ls -lh android/app/android/keystore.jks
+          echo "File size: $(stat -c%s android/app/android/keystore.jks) bytes"
+        else
+          echo "❌ KEYSTORE NOT FOUND!"
+          echo "Searching for any keystore files..."
+          find android -name "*.jks" -o -name "keystore*"
+          exit 1
+        fi
+        
     - name: Build Android APK
       env:
         KEYSTORE_FILE: android/keystore.jks
@@ -164,6 +179,8 @@ PYTHON
       run: |
         cd android
         echo "Building with keystore at: $KEYSTORE_FILE"
+        echo "Verifying keystore from build directory..."
+        ls -lh app/android/keystore.jks || echo "WARNING: Keystore not visible from android/ dir"
         ./gradlew clean
         ./gradlew assembleRelease --no-daemon --stacktrace
         
