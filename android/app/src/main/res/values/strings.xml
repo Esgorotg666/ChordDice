@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">chorddice</string>
-    <string name="title_activity_main">chorddice</string>
-    <string name="package_name">com.chordriff.generator</string>
-    <string name="custom_url_scheme">com.chordriff.generator</string>
+    <string name="app_name">Chord Dice</string>
+    <string name="title_activity_main">Chord Dice</string>
+    <string name="package_name">com.chorddice.app</string>
+    <string name="custom_url_scheme">com.chorddice.app</string>
 </resources>
