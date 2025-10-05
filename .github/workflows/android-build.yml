@@ -170,7 +170,7 @@ jobs:
         packageName: com.chordriff.generator
         releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
         track: internal
-        status: completed
+        status: draft
         inAppUpdatePriority: 2
         releaseName: "${{ github.ref_name }} - Chord Riff Generator"
         
