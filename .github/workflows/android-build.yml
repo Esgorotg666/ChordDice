@@ -62,8 +62,23 @@ jobs:
         sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" android/app/build.gradle
         sed -i "s/versionName \"[^\"]*\"/versionName \"$TAG_NAME\"/" android/app/build.gradle
         
+        - name: Clean Android build cache
+      run: |
+        rm -rf android/app/build
+        rm -rf android/app/.gradle
+        rm -rf android/.gradle
+        echo "✅ Build cache cleaned"
+      
     - name: Sync Capacitor
       run: npx cap sync android
+      
+    - name: Verify package configuration
+      run: |
+        echo "Checking package configuration..."
+        grep -A 5 "applicationId" android/app/build.gradle || true
+        grep -A 5 "namespace" android/app/build.gradle || true
+        echo "MainActivity location:"
+        find android/app/src/main/java -name "MainActivity.java" || true
       
     - name: Check Android setup
       run: |
